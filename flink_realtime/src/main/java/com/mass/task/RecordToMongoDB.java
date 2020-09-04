@@ -6,6 +6,7 @@ import com.mass.util.RecordToEntity;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
@@ -19,6 +20,7 @@ public class RecordToMongoDB {
     public static void main(String[] args) throws Exception{
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(1);
+        env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
         Properties prop = new Properties();
         prop.setProperty("bootstrap.servers", "localhost:9092");

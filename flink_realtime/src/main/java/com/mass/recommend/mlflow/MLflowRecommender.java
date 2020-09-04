@@ -26,8 +26,8 @@ import static com.mass.util.FormatTimestamp.format;
 import static com.mass.util.TypeConvert.convertJSON;
 import static com.mass.util.TypeConvert.convertString;
 
-public class MLflowRecommender extends RichFlatMapFunction<
-        UserConsumed, Tuple4<Integer, List<Integer>, String, Integer>> {
+public class MLflowRecommender extends RichFlatMapFunction<UserConsumed, Tuple4<Integer, List<Integer>, String, Integer>> {
+
     private final int histNum;
     private final int numRec;
     private static Jedis jedis;
@@ -42,17 +42,15 @@ public class MLflowRecommender extends RichFlatMapFunction<
     @Override
     public void open(Configuration parameters) {
         jedis = new Jedis("localhost", 6379);
-        MapStateDescriptor<Integer, List<Integer>> lastRecStateDesc =
-                new MapStateDescriptor<>(
-                        "lastRecState", TypeInformation.of(new TypeHint<Integer>() {}),
-                        TypeInformation.of(new TypeHint<List<Integer>>() {}));
+        MapStateDescriptor<Integer, List<Integer>> lastRecStateDesc = new MapStateDescriptor<>("lastRecState",
+                TypeInformation.of(new TypeHint<Integer>() {}), TypeInformation.of(new TypeHint<List<Integer>>() {}));
         lastRecState = getRuntimeContext().getMapState(lastRecStateDesc);
     }
 
     @Override
     public void close() {
         jedis.close();
-    //    lastRecState.clear();
+        lastRecState.clear();
     }
 
     private void buildConnection() throws IOException {
@@ -74,9 +72,7 @@ public class MLflowRecommender extends RichFlatMapFunction<
     }
 
     @Override
-    public void flatMap(UserConsumed value,
-                        Collector<Tuple4<Integer, List<Integer>, String, Integer>> out)
-            throws Exception {
+    public void flatMap(UserConsumed value, Collector<Tuple4<Integer, List<Integer>, String, Integer>> out) throws Exception {
 
         buildConnection();
         int userId = value.userId;
@@ -133,24 +129,30 @@ public class MLflowRecommender extends RichFlatMapFunction<
             System.out.println(printOut);
             System.out.println(StringUtils.repeat("=", 60));
 
-            int lastReward;
-            List<Integer> lastRecommend = lastRecState.get(userId);
-            if (lastRecommend != null) {
-                lastReward = 0;
-                for (int rec : lastRecommend) {
-                    for (int click : items) {   // map item index
-                        if (rec == click) {
-                            lastReward++;
-                        }
-                    }
-                }
-            } else {
-                lastReward = -1;
-            }
-
-            lastRecState.put(userId, recommend);
+            int lastReward = updateLastReward(userId, items, recommend);
             out.collect(Tuple4.of(userId, recommend, time, lastReward));
         }
+    }
+
+    private int updateLastReward(int userId, List<Integer> items, List<Integer> recommend) throws Exception {
+
+        int lastReward;
+        List<Integer> lastRecommend = lastRecState.get(userId);
+        if (lastRecommend != null) {
+            lastReward = 0;
+            for (int rec : lastRecommend) {
+                for (int click : items) {   // map item index
+                    if (rec == click) {
+                        lastReward++;
+                    }
+                }
+            }
+        } else {
+            lastReward = -1;
+        }
+
+        lastRecState.put(userId, recommend);
+        return lastReward;
     }
 }
 

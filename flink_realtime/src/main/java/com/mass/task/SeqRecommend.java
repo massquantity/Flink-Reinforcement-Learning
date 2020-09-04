@@ -19,7 +19,7 @@ public class SeqRecommend {
         env.setParallelism(1);
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
-        DataStream<RecordEntity> stream = env.addSource(new CustomFileSource());
+        DataStream<RecordEntity> stream = env.addSource(new CustomFileSource("/news_data.csv", false));
         stream.assignTimestampsAndWatermarks(
                 new BoundedOutOfOrdernessTimestampExtractor<RecordEntity>(Time.seconds(10)) {
             @Override
