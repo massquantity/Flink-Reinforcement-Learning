@@ -1,6 +1,7 @@
 package com.mass.recommend.mlflow;
 
 import com.mass.entity.UserConsumed;
+import com.mass.feature.BuildFeature;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.state.MapState;
@@ -23,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import static com.mass.util.FormatTimestamp.format;
+import static com.mass.util.TypeConvert.convertEmbedding;
 import static com.mass.util.TypeConvert.convertJSON;
 import static com.mass.util.TypeConvert.convertString;
 
@@ -33,6 +35,7 @@ public class MLflowRecommender extends RichFlatMapFunction<UserConsumed, Tuple4<
     private static Jedis jedis;
     private static HttpURLConnection con;
     private MapState<Integer, List<Integer>> lastRecState;
+    private BuildFeature stateBuilder = new BuildFeature();
 
     public MLflowRecommender(int numRec, int histNum) {
         this.histNum = histNum;
@@ -45,12 +48,14 @@ public class MLflowRecommender extends RichFlatMapFunction<UserConsumed, Tuple4<
         MapStateDescriptor<Integer, List<Integer>> lastRecStateDesc = new MapStateDescriptor<>("lastRecState",
                 TypeInformation.of(new TypeHint<Integer>() {}), TypeInformation.of(new TypeHint<List<Integer>>() {}));
         lastRecState = getRuntimeContext().getMapState(lastRecStateDesc);
+        stateBuilder.openFile();
     }
 
     @Override
-    public void close() {
+    public void close() throws IOException {
         jedis.close();
         lastRecState.clear();
+        stateBuilder.close();
     }
 
     private void buildConnection() throws IOException {
@@ -81,10 +86,12 @@ public class MLflowRecommender extends RichFlatMapFunction<UserConsumed, Tuple4<
         String time = format(timestamp);
 
         if (items.size() == this.histNum) {
-            String jsonString = convertString(items);
+        //    String jsonString = convertString(items);
+            List<Double> stateEmbeds = stateBuilder.getFeatures(userId, items);
+            String jsonString = convertEmbedding(stateEmbeds);
             writeOutputStream(jsonString);
             int responseCode = con.getResponseCode();
-            System.out.println("Posted parameters : " + jsonString);
+        //    System.out.println("Posted parameters : " + jsonString);
             System.out.println("Response Code : " + responseCode);
 
             List<Integer> recommend = new ArrayList<>();
@@ -135,13 +142,17 @@ public class MLflowRecommender extends RichFlatMapFunction<UserConsumed, Tuple4<
     }
 
     private int updateLastReward(int userId, List<Integer> items, List<Integer> recommend) throws Exception {
+    //    for (Map.Entry<Integer, List<Integer>> entry: lastRecState.entries()) {
+    //        System.out.println(entry.getKey() + " - " + entry.getValue());
+    //    }
+    //    System.out.println("user: " + lastRecState.contains(userId));
 
         int lastReward;
         List<Integer> lastRecommend = lastRecState.get(userId);
         if (lastRecommend != null) {
             lastReward = 0;
             for (int rec : lastRecommend) {
-                for (int click : items) {   // map item index
+                for (int click : items) {
                     if (rec == click) {
                         lastReward++;
                     }

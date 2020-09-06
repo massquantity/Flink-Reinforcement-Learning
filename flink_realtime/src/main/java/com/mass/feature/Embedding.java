@@ -6,13 +6,14 @@ import org.json.JSONTokener;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 
-public class Embedding {
+public class Embedding implements Serializable {
     private InputStream embedStream;
     private JSONObject embedJSON;
 
-    public void openFile() {
-        embedStream = Embedding.class.getResourceAsStream("/features/embeddigns.json");
+    protected void openFile() {
+        embedStream = Embedding.class.getResourceAsStream("/features/embeddings.json");
         try {
             embedJSON = new JSONObject(new JSONTokener(embedStream));
         } catch (NullPointerException e) {
@@ -20,8 +21,8 @@ public class Embedding {
         }
     }
 
-    public JSONArray getEmbedding(String feat, int index) {
-        JSONArray embeds = new JSONArray(embedJSON.getString(feat));
+    protected JSONArray getEmbedding(String feat, int index) {
+        JSONArray embeds = embedJSON.getJSONArray(feat);
         return embeds.getJSONArray(index);
     }
 

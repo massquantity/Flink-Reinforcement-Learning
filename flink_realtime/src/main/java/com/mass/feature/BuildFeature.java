@@ -6,10 +6,11 @@ import org.json.JSONTokener;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BuildFeature {
+public class BuildFeature  implements Serializable {
 
     public static final String[] staticFeat = {
             "click_environment", "click_deviceGroup", "click_os",
@@ -50,31 +51,31 @@ public class BuildFeature {
         n_items = itemJSON.length();
     }
 
-    public int staticFeatIndex(String feat, int userIndex) {
+    private int staticFeatIndex(String feat, int userIndex) {
         String user = String.valueOf(userIndex);
         int key = userJSON.has(user) ? userJSON.getInt(user) : n_users;
-        JSONObject featJO = new JSONObject(featJSON.getString(feat));
+        JSONObject featJO = featJSON.getJSONObject(feat);
         return featJO.getInt(String.valueOf(key));
     }
 
-    public int dynamicFeatIndex(String feat, int itemIndex) {
+    private int dynamicFeatIndex(String feat, int itemIndex) {
         String item = String.valueOf(itemIndex);
         int key = itemJSON.has(item) ? itemJSON.getInt(item) : n_items;
-        JSONObject featJO = new JSONObject(featJSON.getString(feat));
+        JSONObject featJO = featJSON.getJSONObject(feat);
         return featJO.getInt(String.valueOf(key));
     }
 
-    public JSONArray getStaticEmbedding(String feat, int userIndex) {
+    private JSONArray getStaticEmbedding(String feat, int userIndex) {
         int index = staticFeatIndex(feat, userIndex);
         return embeds.getEmbedding(feat, index);
     }
 
-    public JSONArray getDynamicEmbedding(String feat, int itemIndex) {
+    private JSONArray getDynamicEmbedding(String feat, int itemIndex) {
         int index = dynamicFeatIndex(feat, itemIndex);
         return embeds.getEmbedding(feat, index);
     }
 
-    public JSONArray getItemEmbedding(int itemIndex) {
+    private JSONArray getItemEmbedding(int itemIndex) {
         String item = String.valueOf(itemIndex);
         int index = itemJSON.has(item) ? itemJSON.getInt(item) : n_items;
         return embeds.getEmbedding("item", index);
@@ -110,5 +111,6 @@ public class BuildFeature {
         userStream.close();
         itemStream.close();
         featStream.close();
+        embeds.close();
     }
 }
