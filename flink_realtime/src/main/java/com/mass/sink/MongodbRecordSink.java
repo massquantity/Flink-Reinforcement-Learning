@@ -45,7 +45,6 @@ public class MongodbRecordSink extends RichSinkFunction<RecordEntity> {
         int itemId = value.getItemId();
         long timestamp = value.getTime();
         String time = format(timestamp);
-        System.out.println(time);
         FindIterable fe = consumedCollection.find(eq("user", userId));
         if (null == fe.first()) {
             Document consumedDoc = new Document();

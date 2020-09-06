@@ -2,10 +2,13 @@ package com.mass.task;
 
 import com.mass.entity.RecordEntity;
 import com.mass.sink.MongodbRecordSink;
+import com.mass.source.CustomFileSource;
 import com.mass.util.RecordToEntity;
 import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
@@ -13,7 +16,10 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
 import org.apache.flink.util.Collector;
 import org.apache.kafka.common.serialization.StringDeserializer;
+import org.json.JSONObject;
+import org.json.JSONTokener;
 
+import java.io.InputStream;
 import java.util.Properties;
 
 public class RecordToMongoDB {
@@ -32,22 +38,42 @@ public class RecordToMongoDB {
                 new FlinkKafkaConsumer<>("flink-rl", new SimpleStringSchema(), prop));
     //    sourceStream.print();
 
+    //    DataStream<RecordEntity> recordStream = sourceStream.map(
+    //            (MapFunction<String, RecordEntity>) RecordToEntity::getRecord);
+
         DataStream<RecordEntity> recordStream = sourceStream.map(
-                (MapFunction<String, RecordEntity>) RecordToEntity::getRecord);
+                new RichMapFunction<String, RecordEntity>() {
+                    private InputStream userStream;
+                    private InputStream itemStream;
+                    private JSONObject userJSON;
+                    private JSONObject itemJSON;
+
+                    @Override
+                    public void open(Configuration parameters) {
+                        userStream = CustomFileSource.class.getResourceAsStream("/features/user_map.json");
+                        itemStream = CustomFileSource.class.getResourceAsStream("/features/item_map.json");
+                        try {
+                            userJSON = new JSONObject(new JSONTokener(userStream));
+                            itemJSON = new JSONObject(new JSONTokener(itemStream));
+                        } catch (NullPointerException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    @Override
+                    public RecordEntity map(String value) {
+                        return RecordToEntity.getRecord(value, userJSON, itemJSON);
+                   }
+
+                    @Override
+                    public void close() throws Exception {
+                        userStream.close();
+                        itemStream.close();
+                    }
+                }
+            );
+
         recordStream.addSink(new MongodbRecordSink());
-
-        //    DataStream<Tuple2<Integer, Integer>> consumedStream = sourceStream.map(
-        //        new MapFunction<String, Tuple2<Integer, Integer>> () {
-        //            @Override
-        //            public Tuple2<Integer, Integer> map(String value) throws Exception {
-        //                String[] elements = value.split(",");
-        //                int userId = Integer.valueOf(elements[0]);
-        //                int itemId = Integer.valueOf(elements[1]);
-        //                return Tuple2.of(userId, itemId);
-        //            }
-        //        }
-        //    );
-
         env.execute("RecordToMongoDB");
     }
 }

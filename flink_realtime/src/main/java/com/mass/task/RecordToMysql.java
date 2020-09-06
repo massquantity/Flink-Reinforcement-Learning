@@ -3,6 +3,7 @@ package com.mass.task;
 import com.mass.entity.RecordEntity;
 import com.mass.util.RecordToEntity;
 import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
@@ -12,7 +13,10 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.sink.RichSinkFunction;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
+import org.json.JSONObject;
+import org.json.JSONTokener;
 
+import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Properties;
@@ -71,12 +75,34 @@ public class RecordToMysql {
     }
 }
 
-class RecordMapFunction implements MapFunction<String, RecordEntity> {
+class RecordMapFunction extends RichMapFunction<String, RecordEntity> {
+    private InputStream userStream;
+    private InputStream itemStream;
+    private JSONObject userJSON;
+    private JSONObject itemJSON;
+
+    @Override
+    public void open(Configuration parameters) {
+        userStream = RecordMapFunction.class.getResourceAsStream("/features/user_map.json");
+        itemStream = RecordMapFunction.class.getResourceAsStream("/features/item_map.json");
+        try {
+            userJSON = new JSONObject(new JSONTokener(userStream));
+            itemJSON = new JSONObject(new JSONTokener(itemStream));
+        } catch (NullPointerException e) {
+            e.printStackTrace();
+        }
+    }
 
     @Override
     public RecordEntity map(String value) {
-        RecordEntity record = RecordToEntity.getRecord(value);
+        RecordEntity record = RecordToEntity.getRecord(value, userJSON, itemJSON);
         return record;
+    }
+
+    @Override
+    public void close() throws Exception {
+        userStream.close();
+        itemStream.close();
     }
 }
 

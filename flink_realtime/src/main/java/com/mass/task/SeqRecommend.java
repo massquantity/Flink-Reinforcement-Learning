@@ -6,6 +6,7 @@ import com.mass.recommend.mlflow.MLflowRecommender;
 import com.mass.sink.MongodbRecommendSink;
 import com.mass.source.CustomFileSource;
 import com.mass.window.ItemCollectWindowFunction;
+import com.mass.window.ItemCollectWindowFunctionRedis;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
