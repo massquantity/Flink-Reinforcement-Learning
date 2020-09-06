@@ -12,8 +12,8 @@ import redis.clients.jedis.Jedis;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ItemCollectWindowFunctionRedis extends
-        ProcessWindowFunction<RecordEntity, UserConsumed, Tuple, TimeWindow> {
+public class ItemCollectWindowFunctionRedis extends ProcessWindowFunction<RecordEntity, UserConsumed, Tuple, TimeWindow> {
+
     private final int histNum;
     private static Jedis jedis;
 
@@ -28,12 +28,11 @@ public class ItemCollectWindowFunctionRedis extends
     }
 
     @Override
-    public void process(Tuple key, Context ctx, Iterable<RecordEntity> elements,
-                        Collector<UserConsumed> out) {
+    public void process(Tuple key, Context ctx, Iterable<RecordEntity> elements, Collector<UserConsumed> out) {
         int userId = key.getField(0);
         long windowEnd = ctx.window().getEnd();
 
-        String keyList = "hist" + userId;
+        String keyList = "hist_" + userId;
         elements.forEach(e -> jedis.rpush(keyList , String.valueOf(e.getItemId())));
         while (jedis.llen(keyList) > histNum) {
             jedis.lpop(keyList);
@@ -45,5 +44,10 @@ public class ItemCollectWindowFunctionRedis extends
             histItems.add(Integer.parseInt(s));
         }
         out.collect(UserConsumed.of(userId, histItems, windowEnd));
+    }
+
+    @Override
+    public void close() {
+        jedis.close();
     }
 }
