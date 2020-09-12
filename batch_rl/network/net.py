@@ -28,15 +28,18 @@ class ActorMLP(nn.Module):
         state = torch.cat([user_repr, item_repr], dim=1)
         return state
 
-    def forward(self, data, tanh=False):
-        state = self.get_state(data)
+    def get_action(self, state, tanh=False):
         action = F.relu(self.fc1(state))
         action = F.relu(self.fc2(action))
         action = self.fc3(action)
-
         if tanh:
             action = F.tanh(action)
         return action
+
+    def forward(self, data, tanh=False):
+        state = self.get_state(data)
+        action = self.get_action(state, tanh)
+        return state, action
 
 
 class CriticMLP(nn.Module):
