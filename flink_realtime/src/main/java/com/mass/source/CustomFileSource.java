@@ -45,7 +45,7 @@ public class CustomFileSource extends RichSourceFunction<RecordEntity> {
             int itemId = Integer.valueOf(line[4]);
             long time = Long.valueOf(line[5]);
             ctx.collect(new RecordEntity(userId, itemId, time));
-            Thread.sleep(2000L);
+            Thread.sleep(500L);
         }
     }
 

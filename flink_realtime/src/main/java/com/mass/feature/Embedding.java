@@ -12,7 +12,7 @@ public class Embedding implements Serializable {
     private InputStream embedStream;
     private JSONObject embedJSON;
 
-    protected void openFile() {
+    public void openFile() {
         embedStream = Embedding.class.getResourceAsStream("/features/embeddings.json");
         try {
             embedJSON = new JSONObject(new JSONTokener(embedStream));
@@ -21,7 +21,7 @@ public class Embedding implements Serializable {
         }
     }
 
-    protected JSONArray getEmbedding(String feat, int index) {
+    public JSONArray getEmbedding(String feat, int index) {
         JSONArray embeds = embedJSON.getJSONArray(feat);
         return embeds.getJSONArray(index);
     }

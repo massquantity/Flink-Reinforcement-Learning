@@ -34,7 +34,6 @@ public class SeqRecommend {
         .process(new ItemCollectWindowFunction(10))
         .keyBy("windowEnd")
         .flatMap(new MLflowRecommender(10, 10))
-        // .flatMap(new ONNXRecommender(7))
         .addSink(new MongodbRecommendSink());
 
         env.execute("ItemSeqRecommend");

@@ -19,7 +19,6 @@ public class FileToKafka {
         kafkaProps.setProperty("buffer.memory", "33554432");
         kafkaProps.setProperty("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
         kafkaProps.setProperty("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-
         KafkaProducer<String, String> producer = new KafkaProducer<>(kafkaProps);
 
         //  ClassLoader classloader = Thread.currentThread().getContextClassLoader();

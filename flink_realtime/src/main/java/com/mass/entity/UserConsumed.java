@@ -15,6 +15,18 @@ public class UserConsumed {
         return result;
     }
 
+    public int getUserId() {
+        return userId;
+    }
+
+    public List<Integer> getItems() {
+        return items;
+    }
+
+    public long getWindowEnd() {
+        return windowEnd;
+    }
+
     public String toString() {
         return String.format("userId:%5d, itemConsumed:%6s, windowEnd:%13s",
                 userId, items, windowEnd);

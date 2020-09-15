@@ -2,7 +2,7 @@ package com.mass.task;
 
 import com.mass.entity.RecordEntity;
 import com.mass.util.RecordToEntity;
-import org.apache.flink.api.common.functions.MapFunction;
+import com.mass.map.RecordMap;
 import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -40,7 +40,7 @@ public class RecordToMysql {
                 new FlinkKafkaConsumer<>("flink-rl", new SimpleStringSchema(), prop));
         //    stream.print();
 
-        DataStream<RecordEntity> stream2 = stream.map(new RecordMapFunction());
+        DataStream<RecordEntity> stream2 = stream.map(new RecordMap());
         stream2.addSink(new CustomMySqlSink());
 
         env.execute("RecordToMySql");
@@ -52,10 +52,8 @@ public class RecordToMysql {
 
         @Override
         public void open(Configuration parameters) throws Exception {
-            conn = DriverManager.getConnection(
-                    "jdbc:mysql://localhost:3306/flink", "root", "123456");
-            stmt = conn.prepareStatement(
-                    "INSERT INTO record (user, item, time) VALUES (?, ?, ?)");
+            conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/flink", "root", "123456");
+            stmt = conn.prepareStatement("INSERT INTO record (user, item, time) VALUES (?, ?, ?)");
         }
 
         @Override
@@ -72,37 +70,6 @@ public class RecordToMysql {
             stmt.setString(3, sdf.format(value.getTime()));
             stmt.executeUpdate();
         }
-    }
-}
-
-class RecordMapFunction extends RichMapFunction<String, RecordEntity> {
-    private InputStream userStream;
-    private InputStream itemStream;
-    private JSONObject userJSON;
-    private JSONObject itemJSON;
-
-    @Override
-    public void open(Configuration parameters) {
-        userStream = RecordMapFunction.class.getResourceAsStream("/features/user_map.json");
-        itemStream = RecordMapFunction.class.getResourceAsStream("/features/item_map.json");
-        try {
-            userJSON = new JSONObject(new JSONTokener(userStream));
-            itemJSON = new JSONObject(new JSONTokener(itemStream));
-        } catch (NullPointerException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public RecordEntity map(String value) {
-        RecordEntity record = RecordToEntity.getRecord(value, userJSON, itemJSON);
-        return record;
-    }
-
-    @Override
-    public void close() throws Exception {
-        userStream.close();
-        itemStream.close();
     }
 }
 

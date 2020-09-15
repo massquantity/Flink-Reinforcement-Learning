@@ -78,7 +78,6 @@ public class MLflowRecommender extends RichFlatMapFunction<UserConsumed, Tuple4<
 
     @Override
     public void flatMap(UserConsumed value, Collector<Tuple4<Integer, List<Integer>, String, Integer>> out) throws Exception {
-
         buildConnection();
         int userId = value.userId;
         List<Integer> items = value.items;
@@ -87,7 +86,7 @@ public class MLflowRecommender extends RichFlatMapFunction<UserConsumed, Tuple4<
 
         if (items.size() == this.histNum) {
         //    String jsonString = convertString(items);
-            List<Double> stateEmbeds = stateBuilder.getFeatures(userId, items);
+            List<Float> stateEmbeds = stateBuilder.getFeatures(userId, items);
             String jsonString = convertEmbedding(stateEmbeds);
             writeOutputStream(jsonString);
             int responseCode = con.getResponseCode();

@@ -11,8 +11,7 @@ import org.bson.Document;
 
 import java.util.List;
 
-public class MongodbRecommendSink
-        extends RichSinkFunction<Tuple4<Integer, List<Integer>, String, Integer>> {
+public class MongodbRecommendSink extends RichSinkFunction<Tuple4<Integer, List<Integer>, String, Integer>> {
     static MongoClient mongoClient;
     static MongoDatabase database;
     static MongoCollection<Document> recCollection;
