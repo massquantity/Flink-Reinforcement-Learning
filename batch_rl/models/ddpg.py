@@ -48,9 +48,11 @@ class DDPG(nn.Module):
 
         self.step += 1
         info = {
-            "actor_loss": actor_loss.detach().item() if actor_loss is not None else None,
+            "actor_loss":
+                actor_loss.detach().item() if actor_loss is not None else None,
             "critic_loss": critic_loss.detach().item(),
-            "y": y, "q": q, "action": action if action is not None else None
+            "y": y, "q": q,
+            "action": action if action is not None else None
         }
         return info
 
@@ -58,9 +60,11 @@ class DDPG(nn.Module):
         actor_loss, action = self._compute_actor_loss(data)
         critic_loss, y, q = self._compute_critic_loss(data)
         info = {
-            "actor_loss": actor_loss.detach().item() if actor_loss is not None else None,
+            "actor_loss":
+                actor_loss.detach().item() if actor_loss is not None else None,
             "critic_loss": critic_loss.detach().item(),
-            "y": y, "q": q, "action": action if action is not None else None
+            "y": y, "q": q,
+            "action": action if action is not None else None
         }
         return info
 
@@ -77,7 +81,7 @@ class DDPG(nn.Module):
             q_targ = self.critic_targ(next_s, next_a)
             y = r + self.gamma * (1. - done) * q_targ
 
-        s = self.actor.get_state(data).detach()
+        s = self.actor.get_state(data)
         a = self.item_embeds[data["action"]]
         q = self.critic(s, a)
         critic_loss = F.mse_loss(q, y)

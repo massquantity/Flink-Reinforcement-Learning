@@ -1,5 +1,6 @@
 import numpy as np
 from .split import groupby_user
+from utils.misc import compute_returns
 
 
 def rolling_window(a, window):
@@ -73,5 +74,28 @@ def interval_sess_end(data, time_col="time", sess_interval=3600):
         sess_end[u] = np.where(np.ediff1d(user_ts) > sess_interval)[0]
     return sess_end
 
+
+def build_return_session(n_users, hist_num, train_user_consumed,
+                         test_user_consumed=None, train=True, gamma=0.99):
+    user_sess, item_sess, return_sess = [], [], []
+    for u in range(n_users):
+        if train:
+            items = np.asarray(train_user_consumed[u])
+        else:
+            items = np.asarray(
+                train_user_consumed[u][-hist_num:] + test_user_consumed[u]
+            )
+
+        item_session = rolling_window(items, hist_num + 1)
+        sess_len = len(item_session)
+        user_sess.append(np.tile(u, sess_len))
+        item_sess.append(item_session)
+        return_sess.append(compute_returns(
+            np.ones(sess_len), gamma, normalize=False))
+
+    res = {"user": np.concatenate(user_sess),
+           "item": np.concatenate(item_sess, axis=0),
+           "return": np.concatenate(return_sess)}
+    return res
 
 

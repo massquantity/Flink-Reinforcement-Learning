@@ -1,20 +1,27 @@
 from torch.utils.data import Dataset, DataLoader
-from .session import build_session
+from .session import build_session, build_return_session
 
 
 class RLDataset(Dataset):
-    def __init__(self, data):
+    def __init__(self, data, has_return=False):
         self.data = data
+        self.has_return = has_return
 
     def __getitem__(self, index):
         user = self.data["user"][index]
         items = self.data["item"][index]
-        res = {"user": user,
-               "item": items[:-1],
-               "action": items[-1],
-               "reward": self.data["reward"][index],
-               "done": self.data["done"][index],
-               "next_item": items[1:]}
+        if not self.has_return:
+            res = {"user": user,
+                   "item": items[:-1],
+                   "action": items[-1],
+                   "reward": self.data["reward"][index],
+                   "done": self.data["done"][index],
+                   "next_item": items[1:]}
+        else:
+            res = {"user": user,
+                   "item": items[:-1],
+                   "action": items[-1],
+                   "return": self.data["return"][index]}
         return res
 
     def __len__(self):
@@ -22,18 +29,25 @@ class RLDataset(Dataset):
 
 
 class EvalRLDataset(Dataset):
-    def __init__(self, data):
+    def __init__(self, data, has_return=False):
         self.data = data
+        self.has_return = has_return
 
     def __getitem__(self, index):
         user = self.data["user"][index]
         items = self.data["item"][index]
-        res = {"user": user,
-               "item": items[:-1],
-               "action": items[-1],
-               "reward": self.data["reward"][index],
-               "done": self.data["done"][index],
-               "next_item": items[1:]}
+        if not self.has_return:
+            res = {"user": user,
+                   "item": items[:-1],
+                   "action": items[-1],
+                   "reward": self.data["reward"][index],
+                   "done": self.data["done"][index],
+                   "next_item": items[1:]}
+        else:
+            res = {"user": user,
+                   "item": items[:-1],
+                   "action": items[-1],
+                   "return": self.data["return"][index]}
         return res
 
     def __len__(self):
@@ -42,7 +56,7 @@ class EvalRLDataset(Dataset):
 
 def build_dataloader(n_users, hist_num, train_user_consumed, test_user_consumed,
                      batch_size, sess_mode="one", train_sess_end=None,
-                     test_sess_end=None, n_workers=0):
+                     test_sess_end=None, n_workers=0, compute_return=False):
     """Construct DataLoader for pytorch model.
 
     Parameters
@@ -67,6 +81,8 @@ def build_dataloader(n_users, hist_num, train_user_consumed, test_user_consumed,
         Session end mark for each user in test data.
     n_workers : int
         How many subprocesses to use for data loading.
+    compute_return : bool
+        Whether to use compute_return session mode.
 
     Returns
     -------
@@ -76,15 +92,29 @@ def build_dataloader(n_users, hist_num, train_user_consumed, test_user_consumed,
         Test dataloader for testing.
     """
 
-    train_session = build_session(n_users, hist_num, train_user_consumed,
-                                  train=True, sess_end=train_sess_end,
-                                  sess_mode=sess_mode)
-    test_session = build_session(n_users, hist_num, train_user_consumed,
-                                 test_user_consumed, train=False,
-                                 sess_end=test_sess_end, sess_mode=sess_mode)
+    if not compute_return:
+        train_session = build_session(n_users, hist_num, train_user_consumed,
+                                      test_user_consumed, train=True,
+                                      sess_end=train_sess_end,
+                                      sess_mode=sess_mode)
+        test_session = build_session(n_users, hist_num, train_user_consumed,
+                                     test_user_consumed, train=False,
+                                     sess_end=test_sess_end,
+                                     sess_mode=sess_mode)
+        train_rl_data = RLDataset(train_session)
+        test_rl_data = EvalRLDataset(test_session)
 
-    train_rl_data = RLDataset(train_session)
-    test_rl_data = EvalRLDataset(test_session)
+    else:
+        train_session = build_return_session(n_users, hist_num,
+                                             train_user_consumed,
+                                             test_user_consumed,
+                                             train=True, gamma=0.99)
+        test_session = build_return_session(n_users, hist_num,
+                                            train_user_consumed,
+                                            test_user_consumed,
+                                            train=False, gamma=0.99)
+        train_rl_data = RLDataset(train_session, has_return=True)
+        test_rl_data = EvalRLDataset(test_session, has_return=True)
 
     train_rl_loader = DataLoader(train_rl_data, batch_size=batch_size,
                                  shuffle=True, num_workers=n_workers)

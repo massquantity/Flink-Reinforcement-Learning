@@ -46,7 +46,6 @@ def process_data(path, columns=None, test_size=0.2, time_col="time",
     assert time_col in data.columns, "must specify correct time column name..."
 
     data = data.sort_values(by=time_col).reset_index(drop=True)
-    data.label = 1.
     train_data, test_data = split_by_ratio(data, shuffle=False,
                                            test_size=test_size,
                                            pad_unknown=True,
