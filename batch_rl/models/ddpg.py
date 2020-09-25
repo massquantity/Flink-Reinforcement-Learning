@@ -76,7 +76,7 @@ class DDPG(nn.Module):
     def _compute_critic_loss(self, data):
         with torch.no_grad():
             r, done = data["reward"], data["done"]
-            next_s = self.actor.get_state(data, next_state=True)
+            next_s = self.actor_targ.get_state(data, next_state=True)
             next_a = self.actor_targ.get_action(next_s)
             q_targ = self.critic_targ(next_s, next_a)
             y = r + self.gamma * (1. - done) * q_targ

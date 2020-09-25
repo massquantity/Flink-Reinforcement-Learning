@@ -3,9 +3,30 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+def multihead_attention(attention, user_embeds, item_embeds, items, pad_val,
+                        att_mode="normal"):
+#    attention = nn.MultiheadAttention(embed_size, heads).to(device)
+    mask = (items == pad_val)
+    mask[torch.where((mask == torch.tensor(1)).all(1))] = False
+    item_repr = item_embeds.transpose(1, 0)
+    if att_mode == "normal":
+        user_repr = user_embeds.unsqueeze(0)
+        output, weight = attention(user_repr, item_repr, item_repr,
+                                   key_padding_mask=mask)
+        output = output.squeeze()
+    elif att_mode == "self":
+        output, weight = attention(item_repr, item_repr, item_repr,
+                                   key_padding_mask=mask)
+        output = output.transpose(1, 0).mean(dim=1)  # max[0], sum
+    else:
+        raise ValueError("attention must be 'normal' or 'self'")
+    return output
+
+
 class ActorMLP(nn.Module):
     def __init__(self, input_dim, action_dim, hidden_size, user_embeds,
-                 item_embeds):
+                 item_embeds, attention=None, pad_val=0, head=1,  # head
+                 device=torch.device("cpu")):
         super(ActorMLP, self).__init__()
         self.user_embeds = nn.Embedding.from_pretrained(
             torch.as_tensor(user_embeds), freeze=True,
@@ -13,18 +34,35 @@ class ActorMLP(nn.Module):
         self.item_embeds = nn.Embedding.from_pretrained(
             torch.as_tensor(item_embeds), freeze=True,
         )
+        if attention is not None:
+            self.attention = nn.MultiheadAttention(action_dim, head).to(device)
+            self.att_mode = attention
+        else:
+            self.attention = None
 
     #    self.dropout = nn.Dropout(0.5)
         self.fc1 = nn.Linear(input_dim, hidden_size)
         self.fc2 = nn.Linear(hidden_size, hidden_size)
         self.fc3 = nn.Linear(hidden_size, action_dim)
+        self.pad_val = pad_val
+        self.device = device
 
     def get_state(self, data, next_state=False):
         user_repr = self.user_embeds(data["user"])
         item_col = "next_item" if next_state else "item"
-        batch_size = data[item_col].size(0)
-        item_repr = self.item_embeds(data[item_col]).view(batch_size, -1)
-    #    item_repr = torch.mean(self.item_embeds(data[item_col]), dim=1)
+        items = data[item_col]
+    #    batch_size = data[item_col].size(0)
+    #    item_repr = self.item_embeds(data[item_col]).view(batch_size, -1)
+        if not self.attention:
+            true_num = torch.sum(items != self.pad_val, dim=1) + 1e-5
+            item_repr = self.item_embeds(items).sum(dim=1)
+            item_repr = torch.div(item_repr, true_num.float().view(-1, 1))  # compute mean embeddings
+        else:
+            item_repr = self.item_embeds(items)
+            item_repr = multihead_attention(self.attention, user_repr,
+                                            item_repr, items, self.pad_val,
+                                            self.att_mode)
+
         state = torch.cat([user_repr, item_repr], dim=1)
         return state
 
