@@ -54,15 +54,18 @@ class EvalRLDataset(Dataset):
         return len(self.data["item"])
 
 
-def build_dataloader(n_users, hist_num, train_user_consumed, test_user_consumed,
-                     batch_size, sess_mode="one", train_sess_end=None,
-                     test_sess_end=None, n_workers=0, compute_return=False):
+def build_dataloader(n_users, n_items, hist_num, train_user_consumed,
+                     test_user_consumed, batch_size, sess_mode="one",
+                     train_sess_end=None, test_sess_end=None, n_workers=0,
+                     compute_return=False, neg_sample=None):
     """Construct DataLoader for pytorch model.
 
     Parameters
     ----------
     n_users : int
         Number of users.
+    n_items : int
+        Number of items.
     hist_num : int
         A fixed number of history items that a user interacted. If a user has
         interacted with more than `hist_num` items, the front items will be
@@ -83,6 +86,9 @@ def build_dataloader(n_users, hist_num, train_user_consumed, test_user_consumed,
         How many subprocesses to use for data loading.
     compute_return : bool
         Whether to use compute_return session mode.
+    neg_sample : str (default None)
+        Whether to sample negative samples during training, also specify
+        sample mode.
 
     Returns
     -------
@@ -93,14 +99,16 @@ def build_dataloader(n_users, hist_num, train_user_consumed, test_user_consumed,
     """
 
     if not compute_return:
-        train_session = build_session(n_users, hist_num, train_user_consumed,
-                                      test_user_consumed, train=True,
-                                      sess_end=train_sess_end,
-                                      sess_mode=sess_mode)
-        test_session = build_session(n_users, hist_num, train_user_consumed,
-                                     test_user_consumed, train=False,
-                                     sess_end=test_sess_end,
-                                     sess_mode=sess_mode)
+        train_session = build_session(n_users, n_items, hist_num,
+                                      train_user_consumed, test_user_consumed,
+                                      train=True, sess_end=train_sess_end,
+                                      sess_mode=sess_mode,
+                                      neg_sample=neg_sample)
+        test_session = build_session(n_users, n_items, hist_num,
+                                     train_user_consumed, test_user_consumed,
+                                     train=False, sess_end=test_sess_end,
+                                     sess_mode=sess_mode,
+                                     neg_sample=None)
         train_rl_data = RLDataset(train_session)
         test_rl_data = EvalRLDataset(test_session)
 
@@ -118,7 +126,7 @@ def build_dataloader(n_users, hist_num, train_user_consumed, test_user_consumed,
 
     train_rl_loader = DataLoader(train_rl_data, batch_size=batch_size,
                                  shuffle=True, num_workers=n_workers)
-    test_rl_loader = DataLoader(test_rl_data, batch_size=batch_size*2,
+    test_rl_loader = DataLoader(test_rl_data, batch_size=batch_size,
                                 shuffle=False, num_workers=n_workers)
     return train_rl_loader, test_rl_loader
 

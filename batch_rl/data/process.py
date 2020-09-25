@@ -59,8 +59,8 @@ def process_data(path, columns=None, test_size=0.2, time_col="time",
     #    lambda x: list(x)).to_dict()
     # test_user_consumed = test_data.groupby("user")["item"].apply(
     #    lambda x: list(x)).to_dict()
-    train_user_consumed = _build_interaction(train_data)
-    test_user_consumed = _build_interaction(test_data)
+    train_user_consumed = build_interaction(train_data)
+    test_user_consumed = build_interaction(test_data)
 
     train_sess_end = build_sess_end(train_data, sess_mode, time_col, interval)
     test_sess_end = build_sess_end(test_data, sess_mode, time_col, interval)
@@ -81,7 +81,7 @@ def map_unique_value(train_data, test_data):
     return train_data, test_data
 
 
-def _build_interaction(data):
+def build_interaction(data):
     res = defaultdict(list)
     for u, i in zip(data.user, data.item):
         res[u].append(i)
@@ -102,7 +102,7 @@ def _build_feat_map(data, n_items, static_feat=None, dynamic_feat=None):
             feat_map[feat][n_items] = feat_map[feat + "_vocab"]
     return feat_map
 
-
+"""
 def build_batch_data(mode, train_user_consumed, hist_num, n_users, device):
     if mode == "train":
         items = [train_user_consumed[u][:hist_num] for u in range(n_users)]
@@ -111,4 +111,32 @@ def build_batch_data(mode, train_user_consumed, hist_num, n_users, device):
     data = {"user": torch.as_tensor(range(n_users)).to(device),
             "item": torch.as_tensor(items).to(device)}
     return data
+"""
+
+
+def build_batch_data(mode, train_user_consumed, hist_num, n_users, pad_val,
+                     device):
+    items = np.array(
+        [
+            last_history(train_user_consumed[u], hist_num, pad_val, mode)
+            for u in range(n_users)
+        ]
+    )
+    data = {"user": torch.as_tensor(range(n_users)).to(device),
+            "item": torch.from_numpy(items).to(device)}
+    return data
+
+
+def last_history(history, hist_num, pad_val, mode):
+    hist_len = len(history)
+    if hist_len < hist_num:
+        rec_hist = np.full(hist_num, pad_val, dtype=np.int64)
+        rec_hist[-hist_len:] = history
+    else:
+        rec_hist = (
+            np.array(history[:hist_num])
+            if mode == "train"
+            else np.array(history[-hist_num:])
+        )
+    return rec_hist
 
