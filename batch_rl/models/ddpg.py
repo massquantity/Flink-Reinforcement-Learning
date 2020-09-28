@@ -5,9 +5,18 @@ import torch.nn.functional as F
 
 
 class DDPG(nn.Module):
-    def __init__(self, actor, actor_optim, critic, critic_optim, tau=0.001,
-                 gamma=0.99, policy_delay=1, item_embeds=None,
-                 device=torch.device("cpu")):
+    def __init__(
+            self,
+            actor,
+            actor_optim,
+            critic,
+            critic_optim,
+            tau=0.001,
+            gamma=0.99,
+            policy_delay=1,
+            item_embeds=None,
+            device=torch.device("cpu")
+    ):
         super(DDPG, self).__init__()
         self.actor = actor
         self.actor_optim = actor_optim
@@ -15,7 +24,7 @@ class DDPG(nn.Module):
         self.critic_optim = critic_optim
         self.tau = tau
         self.gamma = gamma
-        self.step = 0
+        self.step = 1
         self.policy_delay = policy_delay
         self.actor_targ = deepcopy(actor)
         self.critic_targ = deepcopy(critic)
@@ -34,7 +43,9 @@ class DDPG(nn.Module):
         # torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 0.5, 2)
         self.critic_optim.step()
 
-        if self.step % self.policy_delay == 0:
+        if self.policy_delay <= 1 or (
+                self.policy_delay > 1 and self.step % self.policy_delay == 0
+        ):
             actor_loss, action = self._compute_actor_loss(data)
             self.actor_optim.zero_grad()
             actor_loss.backward()
@@ -48,11 +59,14 @@ class DDPG(nn.Module):
 
         self.step += 1
         info = {
-            "actor_loss":
-                actor_loss.detach().item() if actor_loss is not None else None,
-            "critic_loss": critic_loss.detach().item(),
+            "actor_loss": (
+                actor_loss.cpu().detach().item()
+                if actor_loss is not None
+                else None
+            ),
+            "critic_loss": critic_loss.cpu().detach().item(),
             "y": y, "q": q,
-            "action": action if action is not None else None
+            "action": action
         }
         return info
 
@@ -60,11 +74,14 @@ class DDPG(nn.Module):
         actor_loss, action = self._compute_actor_loss(data)
         critic_loss, y, q = self._compute_critic_loss(data)
         info = {
-            "actor_loss":
-                actor_loss.detach().item() if actor_loss is not None else None,
-            "critic_loss": critic_loss.detach().item(),
+            "actor_loss": (
+                actor_loss.cpu().detach().item()
+                if actor_loss is not None
+                else None
+            ),
+            "critic_loss": critic_loss.cpu().detach().item(),
             "y": y, "q": q,
-            "action": action if action is not None else None
+            "action": action
         }
         return info
 
