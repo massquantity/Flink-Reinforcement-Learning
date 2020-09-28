@@ -5,10 +5,22 @@ import torch.nn.functional as F
 
 
 class BCQ(nn.Module):
-    def __init__(self, generator, gen_optim, perturbator, pert_optim,
-                 critic1, critic2, critic_optim, tau=0.001,
-                 gamma=0.99, lam=0.75, policy_delay=1, item_embeds=None,
-                 device=torch.device("cpu")):
+    def __init__(
+            self,
+            generator,
+            gen_optim,
+            perturbator,
+            pert_optim,
+            critic1,
+            critic2,
+            critic_optim,
+            tau=0.001,
+            gamma=0.99,
+            lam=0.75,
+            policy_delay=1,
+            item_embeds=None,
+            device=torch.device("cpu")
+    ):
         super(BCQ, self).__init__()
         self.generator = generator
         self.gen_optim = gen_optim
@@ -20,7 +32,7 @@ class BCQ(nn.Module):
         self.tau = tau
         self.gamma = gamma
         self.lam = lam
-        self.step = 0
+        self.step = 1
         self.policy_delay = policy_delay
         self.perturbator_targ = deepcopy(perturbator)
         self.critic1_targ = deepcopy(critic1)
@@ -48,7 +60,9 @@ class BCQ(nn.Module):
         # torch.nn.utils.clip_grad_norm_(self.critic.parameters(), 0.5, 2)
         self.critic_optim.step()
 
-        if self.step % self.policy_delay == 0:
+        if self.policy_delay <= 1 or (
+                self.policy_delay > 1 and self.step % self.policy_delay == 0
+        ):
             perturbator_loss, action = self._compute_perturbator_loss(state)
             self.pert_optim.zero_grad()
             perturbator_loss.backward()
@@ -63,9 +77,13 @@ class BCQ(nn.Module):
 
         self.step += 1
         info = {
-            "generator_loss": generator_loss.detach().item(),
-            "perturbator_loss": perturbator_loss.detach().item(),
-            "critic_loss": critic_loss.detach().item(),
+            "generator_loss": generator_loss.cpu().detach().item(),
+            "perturbator_loss": (
+                perturbator_loss.cpu().detach().item()
+                if perturbator_loss is not None
+                else None
+            ),
+            "critic_loss": critic_loss.cpu().detach().item(),
             "y": y, "q1": q1, "q2": q2,
             "action": action
         }
@@ -77,9 +95,13 @@ class BCQ(nn.Module):
         critic_loss, y, q1, q2 = self._compute_critic_loss(data)
         perturbator_loss, action = self._compute_perturbator_loss(state)
         info = {
-            "generator_loss": generator_loss.item(),
-            "perturbator_loss": perturbator_loss.item(),
-            "critic_loss": critic_loss.item(),
+            "generator_loss": generator_loss.cpu().detach().item(),
+                        "perturbator_loss": (
+                perturbator_loss.cpu().detach().item()
+                if perturbator_loss is not None
+                else None
+            ),
+            "critic_loss": critic_loss.cpu().detach().item(),
             "y": y, "q1": q1, "q2": q2,
             "action": action
         }
@@ -102,9 +124,9 @@ class BCQ(nn.Module):
 
     def _compute_critic_loss(self, data):
         with torch.no_grad():
-            next_s = self.generator.get_state(data, next_state=True)
             r, done = data["reward"], data["done"]
             batch_size = done.size(0)
+            next_s = self.generator.get_state(data, next_state=True)
             next_s_repeat = torch.repeat_interleave(next_s, 10, dim=0)
             sampled_actions = self.generator.decode(next_s_repeat)
             perturbed_actions = self.perturbator_targ(next_s_repeat,
@@ -112,8 +134,10 @@ class BCQ(nn.Module):
 
             q_targ1 = self.critic1_targ(next_s_repeat, perturbed_actions)
             q_targ2 = self.critic2_targ(next_s_repeat, perturbed_actions)
-            q_targ = (self.lam * torch.min(q_targ1, q_targ2)
-                      + (1. - self.lam) * torch.max(q_targ1, q_targ2))
+            q_targ = (
+                    self.lam * torch.min(q_targ1, q_targ2)
+                    + (1. - self.lam) * torch.max(q_targ1, q_targ2)
+            )
             q_targ = q_targ.reshape(batch_size, -1).max(dim=1)[0]
             y = r + self.gamma * (1. - done) * q_targ
 
