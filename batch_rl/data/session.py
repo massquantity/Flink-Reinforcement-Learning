@@ -21,9 +21,20 @@ def pad_session(hist_len, hist_num, hist_items, pad_val):
     return session_first
 
 
-def build_session(n_users, n_items, hist_num, train_user_consumed,
-                  test_user_consumed=None, train=True, sess_end=None,
-                  sess_mode="one", neg_sample=None):
+def build_session(
+        n_users,
+        n_items,
+        hist_num,
+        train_user_consumed,
+        test_user_consumed=None,
+        train=True,
+        sess_end=None,
+        sess_mode="one",
+        neg_sample=None,
+        train_rewards=None,
+        test_rewards=None,
+        reward_shape=None
+):
     user_sess, item_sess, reward_sess, done_sess = [], [], [], []
     user_consumed_set = {
         u: set(items) for u, items in train_user_consumed.items()
@@ -47,7 +58,7 @@ def build_session(n_users, n_items, hist_num, train_user_consumed,
             )
 
         if train and neg_sample is not None:
-            expanded_items, num_neg = sample_neg_session(
+            expanded_items, num_neg, _ = sample_neg_session(
                 expanded_items, user_consumed_set[u], n_items, neg_sample
             )
 
@@ -55,29 +66,23 @@ def build_session(n_users, n_items, hist_num, train_user_consumed,
         user_sess.append(np.tile(u, sess_len))
         item_sess.append(expanded_items)
 
-        reward = np.ones(sess_len, dtype=np.float32)
-        if train and neg_sample is not None:
+        if reward_shape is not None:
+            reward = assign_reward(
+                sess_len, u, train, train_rewards, test_rewards,
+                train_user_consumed, hist_num, reward_shape
+            )
+        else:
+            reward = np.ones(sess_len, dtype=np.float32)
+
+        if train and neg_sample is not None and num_neg > 0:
             reward[-num_neg:] = 0.
         reward_sess.append(reward)
-
-        # if sess_mode == "one":
-        #    done = np.zeros(sess_len, dtype=np.float32)
-        #    done[-1] = 1.
-        # else:
-        #    if train:
-        #        end_mask = sess_end[u] - hist_num
-        #        end_mask = end_mask[end_mask >= 0]
-        #    else:
-        #        end_mask = sess_end[u]
-        #    done = np.zeros(sess_len, dtype=np.float32)
-        #    done[end_mask] = 1.
-        #    done[-1] = 1.
 
         done = np.zeros(sess_len, dtype=np.float32)
         if train and sess_mode == "interval":
             end_mask = sess_end[u]
             done[end_mask] = 1.
-        if train and neg_sample is not None:
+        if train and neg_sample is not None and num_neg > 0:
             done[-num_neg - 1] = 1.
         else:
             done[-1] = 1.
@@ -93,7 +98,7 @@ def build_session(n_users, n_items, hist_num, train_user_consumed,
 def sample_neg_session(items, consumed, n_items, sample_mode):
     size = len(items)
     if size <= 3:
-        return items, 0
+        return items, 0, items
 
     num_neg = size // 2
     item_sampled = []
@@ -110,7 +115,44 @@ def sample_neg_session(items, consumed, n_items, sample_mode):
     assert len(indices) == num_neg, "indices and num_neg must equal."
     neg_items = items[indices]
     neg_items[:, -1] = item_sampled
-    return np.concatenate([items, neg_items], axis=0), num_neg
+    return np.concatenate([items, neg_items], axis=0), num_neg, items
+
+
+def assign_reward(sess_len, user, train_flag, train_rewards, test_rewards,
+                  train_user_consumed, hist_num, reward_shape):
+    reward = np.ones(sess_len, dtype=np.float32)
+    if train_flag and train_rewards is not None:
+        for label, index in train_rewards[user].items():
+            # skip first as it will never become label
+            index = index - 1
+            index = index[index >= 0]
+            if len(index) > 0:
+                reward[index] = reward_shape[label]
+    elif (
+            not train_flag
+            and test_rewards is not None
+            and train_rewards is not None
+    ):
+        train_len = len(train_user_consumed[user])
+        train_dummy_reward = np.ones(train_len, dtype=np.float32)
+        boundary = (
+            hist_num - 1
+            if hist_num - 1 < train_len - 1
+            else train_len - 1
+        )
+        for label, index in train_rewards[user].items():
+            index = index - 1
+            index = index[index >= 0]
+            if len(index) > 0:
+                train_dummy_reward[index] = reward_shape[label]
+        reward[:boundary] = train_dummy_reward[-boundary:]
+
+        if test_rewards[user]:
+            for label, index in test_rewards[user].items():
+                index = index + boundary
+                reward[index] = reward_shape[label]
+
+    return reward
 
 
 def build_sess_end(data, sess_mode="one", time_col=None, interval=3600):
@@ -140,9 +182,30 @@ def interval_sess_end(data, time_col="time", sess_interval=3600):
     return sess_end
 
 
-def build_return_session(n_users, hist_num, train_user_consumed,
-                         test_user_consumed=None, train=True, gamma=0.99):
-    user_sess, item_sess, return_sess = [], [], []
+def build_return_session(
+        n_users,
+        n_items,
+        hist_num,
+        train_user_consumed,
+        test_user_consumed=None,
+        train=True,
+        gamma=0.99,
+        neg_sample=None,
+        train_rewards=None,
+        test_rewards=None,
+        reward_shape=None
+):
+    (
+        user_sess,
+        item_sess,
+        return_sess,
+        beta_users,
+        beta_items,
+        beta_labels
+    ) = [], [], [], [], [], []
+    user_consumed_set = {
+        u: set(items) for u, items in train_user_consumed.items()
+    }
     for u in range(n_users):
         if train:
             items = np.asarray(train_user_consumed[u])
@@ -151,16 +214,52 @@ def build_return_session(n_users, hist_num, train_user_consumed,
                 train_user_consumed[u][-hist_num:] + test_user_consumed[u]
             )
 
-        item_session = rolling_window(items, hist_num + 1)
-        sess_len = len(item_session)
+        hist_len = len(items)
+        expanded_items = pad_session(hist_len, hist_num, items, pad_val=n_items)
+
+        if hist_len > hist_num:
+            full_size_sess = rolling_window(items, hist_num + 1)
+            expanded_items = np.concatenate(
+                [expanded_items, full_size_sess],
+                axis=0
+            )
+
+        if train and neg_sample is not None:
+            neg_items, num_neg, expanded_items = sample_neg_session(
+                expanded_items, user_consumed_set[u], n_items, neg_sample
+            )
+
+        sess_len = len(expanded_items)
         user_sess.append(np.tile(u, sess_len))
-        item_sess.append(item_session)
-        return_sess.append(compute_returns(
-            np.ones(sess_len), gamma, normalize=False))
+        item_sess.append(expanded_items)
 
-    res = {"user": np.concatenate(user_sess),
-           "item": np.concatenate(item_sess, axis=0),
-           "return": np.concatenate(return_sess)}
+        if reward_shape is not None:
+            reward = assign_reward(
+                sess_len, u, train, train_rewards, test_rewards,
+                train_user_consumed, hist_num, reward_shape
+            )
+        else:
+            reward = np.ones(sess_len, dtype=np.float32)
+
+        return_sess.append(
+            compute_returns(reward, gamma, normalize=False)
+        )
+
+        if train and neg_sample is not None and num_neg > 0:
+            beta_len = len(neg_items)
+            beta_users.append(np.tile(u, beta_len))
+            beta_items.append(neg_items[:, :-1])
+            beta_labels.append(neg_items[:, -1])
+
+    if train and neg_sample is not None and num_neg > 0:
+        res = {"user": np.concatenate(user_sess),
+               "item": np.concatenate(item_sess, axis=0),
+               "return": np.concatenate(return_sess),
+               "beta_user": np.concatenate(beta_users),
+               "beta_item": np.concatenate(beta_items, axis=0),
+               "beta_label": np.concatenate(beta_labels)}
+    else:
+        res = {"user": np.concatenate(user_sess),
+               "item": np.concatenate(item_sess, axis=0),
+               "return": np.concatenate(return_sess)}
     return res
-
-

@@ -7,7 +7,7 @@ from .split import split_by_ratio
 
 
 def process_data(path, columns=None, test_size=0.2, time_col="time",
-                 sess_mode="one", interval=None):
+                 sess_mode="one", interval=None, reward_shape=None):
     """Split and process data before building dataloader.
 
     Parameters
@@ -24,6 +24,8 @@ def process_data(path, columns=None, test_size=0.2, time_col="time",
         Ways of representing a session.
     interval : int
         Interval between different sessions.
+    reward_shape : dict
+        A dict for mapping labels to rewards.
 
     Returns
     -------
@@ -39,6 +41,10 @@ def process_data(path, columns=None, test_size=0.2, time_col="time",
         Session end mark for each user in train data.
     test_sess_end : dict
         Session end mark for each user in test data.
+    train_rewards : dict (default None)
+        A dict for mapping train users to rewards.
+    test_rewards : dict (default None)
+        A dict for mapping test users to rewards.
     """
 
     column_names = columns if columns is not None else None
@@ -61,31 +67,64 @@ def process_data(path, columns=None, test_size=0.2, time_col="time",
     #    lambda x: list(x)).to_dict()
     train_user_consumed = build_interaction(train_data)
     test_user_consumed = build_interaction(test_data)
+    if reward_shape is not None:
+        train_rewards = build_reward(train_data, reward_shape)
+        test_rewards = build_reward(test_data, reward_shape)
+    else:
+        train_rewards = test_rewards = None
 
     train_sess_end = build_sess_end(train_data, sess_mode, time_col, interval)
     test_sess_end = build_sess_end(test_data, sess_mode, time_col, interval)
-    return (n_users, n_items, train_user_consumed, test_user_consumed,
-            train_sess_end, test_sess_end)
+
+    result = (
+        n_users,
+        n_items,
+        train_user_consumed,
+        test_user_consumed,
+        train_sess_end,
+        test_sess_end,
+        train_rewards,
+        test_rewards
+    )
+    return result
 
 
 def map_unique_value(train_data, test_data):
     for col in ["user", "item"]:
-        unique_vals = np.unique(train_data[col])
-        mapping = dict(zip(unique_vals, range(len(unique_vals))))
+        # unique_vals = np.unique(train_data[col])
+        # mapping = dict(zip(unique_vals, range(len(unique_vals))))
+        # map according to frequency
+        counts = train_data[col].value_counts()
+        freq = counts.index.tolist()
+        mapping = dict(zip(freq, range(len(freq))))
         train_data[col] = train_data[col].map(mapping)
         test_data[col] = test_data[col].map(mapping)
         if test_data[col].isnull().any():
             col_type = train_data[col].dtype
-            test_data[col].fillna(len(unique_vals), inplace=True)
+            test_data[col].fillna(len(freq), inplace=True)
             test_data[col] = test_data[col].astype(col_type)
     return train_data, test_data
 
 
 def build_interaction(data):
-    res = defaultdict(list)
-    for u, i in zip(data.user, data.item):
-        res[u].append(i)
-    return res
+    consumed = defaultdict(list)
+    for u, i in zip(data.user.tolist(), data.item.tolist()):
+        consumed[u].append(i)
+    return consumed
+
+
+def build_reward(data, reward_shape):
+    label_all = defaultdict(list)
+    for u, l in zip(data.user.tolist(), data.label.tolist()):
+        label_all[u].append(l)
+
+    reward_all = defaultdict(dict)
+    for user, label in label_all.items():
+        for key, rew in reward_shape.items():
+            index = np.where(np.array(label) == key)[0]
+            if len(index) > 0:
+                reward_all[user].update({key: index})
+    return reward_all
 
 
 def _build_feat_map(data, n_items, static_feat=None, dynamic_feat=None):

@@ -66,4 +66,3 @@ def _pad_unknown_item(data_list):
     unique_items = set(train_data.item.tolist())
     test_data.loc[~test_data.item.isin(unique_items), "item"] = n_items
     return train_data, test_data
-

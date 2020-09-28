@@ -18,10 +18,19 @@ class RLDataset(Dataset):
                    "done": self.data["done"][index],
                    "next_item": items[1:]}
         else:
-            res = {"user": user,
-                   "item": items[:-1],
-                   "action": items[-1],
-                   "return": self.data["return"][index]}
+            if "beta_label" in self.data:
+                res = {"user": user,
+                       "item": items[:-1],
+                       "action": items[-1],
+                       "return": self.data["return"][index],
+                       "beta_user": self.data["beta_user"][index],
+                       "beta_item": self.data["beta_item"][index],
+                       "beta_label": self.data["beta_label"][index]}
+            else:
+                res = {"user": user,
+                       "item": items[:-1],
+                       "action": items[-1],
+                       "return": self.data["return"][index]}
         return res
 
     def __len__(self):
@@ -44,20 +53,42 @@ class EvalRLDataset(Dataset):
                    "done": self.data["done"][index],
                    "next_item": items[1:]}
         else:
-            res = {"user": user,
-                   "item": items[:-1],
-                   "action": items[-1],
-                   "return": self.data["return"][index]}
+            if "beta_label" in self.data:
+                res = {"user": user,
+                       "item": items[:-1],
+                       "action": items[-1],
+                       "return": self.data["return"][index],
+                       "beta_user": self.data["beta_user"][index],
+                       "beta_item": self.data["beta_item"][index],
+                       "beta_label": self.data["beta_label"][index]}
+            else:
+                res = {"user": user,
+                       "item": items[:-1],
+                       "action": items[-1],
+                       "return": self.data["return"][index]}
         return res
 
     def __len__(self):
         return len(self.data["item"])
 
 
-def build_dataloader(n_users, n_items, hist_num, train_user_consumed,
-                     test_user_consumed, batch_size, sess_mode="one",
-                     train_sess_end=None, test_sess_end=None, n_workers=0,
-                     compute_return=False, neg_sample=None):
+def build_dataloader(
+        n_users,
+        n_items,
+        hist_num,
+        train_user_consumed,
+        test_user_consumed,
+        batch_size,
+        sess_mode="one",
+        train_sess_end=None,
+        test_sess_end=None,
+        n_workers=0,
+        compute_return=False,
+        neg_sample=None,
+        train_rewards=None,
+        test_rewards=None,
+        reward_shape=None
+):
     """Construct DataLoader for pytorch model.
 
     Parameters
@@ -89,6 +120,12 @@ def build_dataloader(n_users, n_items, hist_num, train_user_consumed,
     neg_sample : str (default None)
         Whether to sample negative samples during training, also specify
         sample mode.
+    train_rewards : dict (default None)
+        A dict for mapping train users to rewards.
+    test_rewards : dict (default None)
+        A dict for mapping test users to rewards.
+    reward_shape : dict (default None)
+        A dict for mapping labels to rewards.
 
     Returns
     -------
@@ -99,28 +136,64 @@ def build_dataloader(n_users, n_items, hist_num, train_user_consumed,
     """
 
     if not compute_return:
-        train_session = build_session(n_users, n_items, hist_num,
-                                      train_user_consumed, test_user_consumed,
-                                      train=True, sess_end=train_sess_end,
-                                      sess_mode=sess_mode,
-                                      neg_sample=neg_sample)
-        test_session = build_session(n_users, n_items, hist_num,
-                                     train_user_consumed, test_user_consumed,
-                                     train=False, sess_end=test_sess_end,
-                                     sess_mode=sess_mode,
-                                     neg_sample=None)
+        train_session = build_session(
+            n_users,
+            n_items,
+            hist_num,
+            train_user_consumed,
+            test_user_consumed,
+            train=True,
+            sess_end=train_sess_end,
+            sess_mode=sess_mode,
+            neg_sample=neg_sample,
+            train_rewards=train_rewards,
+            test_rewards=test_rewards,
+            reward_shape=reward_shape
+        )
+        test_session = build_session(
+            n_users,
+            n_items,
+            hist_num,
+            train_user_consumed,
+            test_user_consumed,
+            train=False,
+            sess_end=test_sess_end,
+            sess_mode=sess_mode,
+            neg_sample=None,
+            train_rewards=train_rewards,
+            test_rewards=test_rewards,
+            reward_shape=reward_shape
+        )
         train_rl_data = RLDataset(train_session)
         test_rl_data = EvalRLDataset(test_session)
 
     else:
-        train_session = build_return_session(n_users, hist_num,
-                                             train_user_consumed,
-                                             test_user_consumed,
-                                             train=True, gamma=0.99)
-        test_session = build_return_session(n_users, hist_num,
-                                            train_user_consumed,
-                                            test_user_consumed,
-                                            train=False, gamma=0.99)
+        train_session = build_return_session(
+            n_users,
+            n_items,
+            hist_num,
+            train_user_consumed,
+            test_user_consumed,
+            train=True,
+            gamma=0.99,
+            neg_sample=neg_sample,
+            train_rewards=train_rewards,
+            test_rewards=test_rewards,
+            reward_shape=reward_shape
+        )
+        test_session = build_return_session(
+            n_users,
+            n_items,
+            hist_num,
+            train_user_consumed,
+            test_user_consumed,
+            train=False,
+            gamma=0.99,
+            neg_sample=None,
+            train_rewards=train_rewards,
+            test_rewards=test_rewards,
+            reward_shape=reward_shape
+        )
         train_rl_data = RLDataset(train_session, has_return=True)
         test_rl_data = EvalRLDataset(test_session, has_return=True)
 
@@ -129,5 +202,3 @@ def build_dataloader(n_users, n_items, hist_num, train_user_consumed,
     test_rl_loader = DataLoader(test_rl_data, batch_size=batch_size,
                                 shuffle=False, num_workers=n_workers)
     return train_rl_loader, test_rl_loader
-
-
