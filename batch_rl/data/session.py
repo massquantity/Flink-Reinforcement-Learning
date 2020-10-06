@@ -190,6 +190,8 @@ def build_return_session(
         test_user_consumed=None,
         train=True,
         gamma=0.99,
+        sess_end=None,
+        sess_mode="one",
         neg_sample=None,
         train_rewards=None,
         test_rewards=None,
@@ -241,8 +243,13 @@ def build_return_session(
         else:
             reward = np.ones(sess_len, dtype=np.float32)
 
+        sess_end_u = (
+            sess_end[u] + 1
+            if train and sess_mode == "interval"
+            else None
+        )
         return_sess.append(
-            compute_returns(reward, gamma, normalize=False)
+            compute_returns(reward, gamma, sess_end_u, normalize=False)
         )
 
         if train and neg_sample is not None and num_neg > 0:
