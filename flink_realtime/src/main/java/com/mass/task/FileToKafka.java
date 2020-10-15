@@ -18,7 +18,7 @@ public class FileToKafka {
 
         //  ClassLoader classloader = Thread.currentThread().getContextClassLoader();
         //  InputStream is = classloader.getResourceAsStream("/news_data.csv");
-        String dataPath = KafkaSource.class.getResource("/tianchi.csv").getFile();
+        String dataPath = FileToKafka.class.getResource("/tianchi.csv").getFile();
         KafkaSource.sendData(kafkaProps, dataPath, false);
     }
 }
