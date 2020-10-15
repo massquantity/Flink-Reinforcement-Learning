@@ -8,9 +8,8 @@ import org.apache.kafka.clients.producer.Callback;
 import java.io.*;
 import java.util.Properties;
 
-public class FileToKafka {
+public class KafkaSource {
     public static void main(String[] args) throws IOException, InterruptedException {
-
         Properties kafkaProps = new Properties();
         kafkaProps.setProperty("bootstrap.servers", "localhost:9092");
         kafkaProps.setProperty("ack", "1");
@@ -23,13 +22,13 @@ public class FileToKafka {
 
         //  ClassLoader classloader = Thread.currentThread().getContextClassLoader();
         //  InputStream is = classloader.getResourceAsStream("/news_data.csv");
-        String dataPath = FileToKafka.class.getResource("/news_data.csv").getFile();
+        String dataPath = KafkaSource.class.getResource("/news_data.csv").getFile();
         BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(dataPath)));
         String temp;
         int i = 0;
         while ((temp = br.readLine()) != null) {
             i++;
-            if (i > 1) {  // // skip header line
+            if (i > 1) {  // skip header line
                 String[] splitted = temp.split(",");
                 String[] record = {splitted[0], splitted[4], splitted[5]};
                 String csvString = String.join(",", record);
