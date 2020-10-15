@@ -8,11 +8,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 
-public class Embedding implements Serializable {
+public class Embedding {
     private InputStream embedStream;
     private JSONObject embedJSON;
 
-    public void openFile() {
+    public Embedding() {
         embedStream = Embedding.class.getResourceAsStream("/features/embeddings.json");
         try {
             embedJSON = new JSONObject(new JSONTokener(embedStream));

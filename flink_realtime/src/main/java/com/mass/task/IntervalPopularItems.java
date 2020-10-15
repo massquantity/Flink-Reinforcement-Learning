@@ -3,9 +3,8 @@ package com.mass.task;
 import com.mass.agg.CountAgg;
 import com.mass.entity.RecordEntity;
 import com.mass.map.RecordMap;
-import com.mass.process.TopNHotItems;
+import com.mass.process.TopNPopularItems;
 import com.mass.sink.TopNRedisSink;
-import com.mass.source.CustomFileSource;
 import com.mass.window.CountProcessWindowFunction;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
@@ -27,8 +26,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Properties;
 
-public class IntervalHotItems {
-    public static final int topSize = 17;
+public class IntervalPopularItems {
+    private static final int topSize = 17;
     private static SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     public static void main(String[] args) throws Exception {
@@ -41,7 +40,6 @@ public class IntervalHotItems {
                 .setHost("localhost")
                 .setPort(6379)
                 .build();
-    //    DataStream<RecordEntity> stream = env.addSource(new CustomFileSource("/news_data.csv", false));
         Properties prop = new Properties();
         prop.setProperty("bootstrap.servers", "localhost:9092");
         prop.setProperty("group.id", "rec");
@@ -59,13 +57,13 @@ public class IntervalHotItems {
                         return element.getTime();
                     }
                 })
-                // .keyBy("itemId")  // if using POJOs, convert to tuple
+                // .keyBy("itemId")  // if using POJOs, will convert to tuple
                 // .keyBy(i -> i.getItemId())
                 .keyBy(RecordEntity::getItemId)
                 .timeWindow(Time.minutes(60), Time.seconds(80))
                 .aggregate(new CountAgg(), new CountProcessWindowFunction())
                 .keyBy("windowEnd")
-                .process(new TopNHotItems(topSize))
+                .process(new TopNPopularItems(topSize))
                 .flatMap(new FlatMapFunction<List<String>, Tuple2<String, String>>() {
                     @Override
                     public void flatMap(List<String> value, Collector<Tuple2<String, String>> out) {
@@ -79,7 +77,7 @@ public class IntervalHotItems {
                 });
 
         topItem.addSink(new RedisSink<Tuple2<String, String>>(redisConf, new TopNRedisSink()));
-        env.execute("IntervalHotItems");
+        env.execute("IntervalPopularItems");
     }
 
     private static void showTime(String timestamp) {

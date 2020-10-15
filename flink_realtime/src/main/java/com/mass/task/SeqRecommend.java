@@ -1,7 +1,7 @@
 package com.mass.task;
 
 import com.mass.entity.RecordEntity;
-import com.mass.recommend.mlflow.MLflowRecommender;
+import com.mass.recommend.fastapi.FastapiRecommender;
 // import com.mass.recommend.onnx.ONNXRecommender;
 import com.mass.sink.MongodbRecommendSink;
 import com.mass.source.CustomFileSource;
@@ -20,7 +20,7 @@ public class SeqRecommend {
         env.setParallelism(1);
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
-        DataStream<RecordEntity> stream = env.addSource(new CustomFileSource("/news_data.csv", false));
+        DataStream<RecordEntity> stream = env.addSource(new CustomFileSource("/tianchi.csv", false));
         stream.assignTimestampsAndWatermarks(
                 new BoundedOutOfOrdernessTimestampExtractor<RecordEntity>(Time.seconds(10)) {
             @Override
@@ -33,7 +33,7 @@ public class SeqRecommend {
         .timeWindow(Time.seconds(60), Time.seconds(20))
         .process(new ItemCollectWindowFunction(10))
         .keyBy("windowEnd")
-        .flatMap(new MLflowRecommender(10, 10))
+        .flatMap(new FastapiRecommender(8, 10, "ddpg", false))
         .addSink(new MongodbRecommendSink());
 
         env.execute("ItemSeqRecommend");

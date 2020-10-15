@@ -4,17 +4,14 @@ import com.mass.entity.RecordEntity;
 import com.mass.sink.MongodbRecordSink;
 import com.mass.source.CustomFileSource;
 import com.mass.util.RecordToEntity;
-import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
-import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer;
-import org.apache.flink.util.Collector;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -36,13 +33,8 @@ public class RecordToMongoDB {
                 Class.forName("org.apache.kafka.common.serialization.StringDeserializer").getName());
         DataStreamSource<String> sourceStream = env.addSource(
                 new FlinkKafkaConsumer<>("flink-rl", new SimpleStringSchema(), prop));
-    //    sourceStream.print();
 
-    //    DataStream<RecordEntity> recordStream = sourceStream.map(
-    //            (MapFunction<String, RecordEntity>) RecordToEntity::getRecord);
-
-        DataStream<RecordEntity> recordStream = sourceStream.map(
-                new RichMapFunction<String, RecordEntity>() {
+        DataStream<RecordEntity> recordStream = sourceStream.map(new RichMapFunction<String, RecordEntity>() {
                     private InputStream userStream;
                     private InputStream itemStream;
                     private JSONObject userJSON;

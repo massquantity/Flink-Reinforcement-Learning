@@ -5,51 +5,41 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class BuildFeature implements Serializable {
-    private InputStream userStream;
-    private InputStream itemStream;
-    private JSONObject userJSON;
-    private JSONObject itemJSON;
-    private Embedding embeds;
-    private int numUsers;
-    private int numItems;
+public class BuildFeature {
+    private Boolean withState;
+    private static Embedding embeds;
+    private static IdConverter idConverter;
 
-    public BuildFeature() {
-        embeds = new Embedding();
-    }
-
-    public void openFile() {
-        userStream = BuildFeature.class.getResourceAsStream("/features/user_map.json");
-        itemStream = BuildFeature.class.getResourceAsStream("/features/item_map.json");
-        try {
-            userJSON = new JSONObject(new JSONTokener(userStream));
-            itemJSON = new JSONObject(new JSONTokener(itemStream));
-        } catch (NullPointerException e) {
-            e.printStackTrace();
+    public BuildFeature(Boolean withState, IdConverter idConverter) {
+        this.withState = withState;
+        BuildFeature.idConverter = idConverter;
+        if (withState){
+            embeds = new Embedding();
         }
-        embeds.openFile();
-        numUsers = userJSON.length();
-        numItems = itemJSON.length();
     }
 
-    private JSONArray getUserEmbedding(int userIndex) {
-        String user = String.valueOf(userIndex);
-        int index = userJSON.has(user) ? userJSON.getInt(user) : numUsers;
-        return embeds.getEmbedding("user", index);
+    public int getUserId(int userIndex) {
+        return idConverter.getUserId(userIndex);
     }
 
-    private JSONArray getItemEmbedding(int itemIndex) {
-        String item = String.valueOf(itemIndex);
-        int index = itemJSON.has(item) ? itemJSON.getInt(item) : numItems;
-        return embeds.getEmbedding("item", index);
+    public int getItemId(int itemIndex) {
+        return idConverter.getItemId(itemIndex);
     }
 
-    public List<Float> getFeatures(int user, List<Integer> items) {
+    private JSONArray getUserEmbedding(int userId) {
+    //    int userId = getUserId(userIndex);
+        return embeds.getEmbedding("user", userId);
+    }
+
+    private JSONArray getItemEmbedding(int itemId) {
+    //    int itemId = getItemId(itemIndex);
+        return embeds.getEmbedding("item", itemId);
+    }
+
+    public List<Float> getEmbedding(int user, List<Integer> items) {
         List<Float> features = new ArrayList<>();
         JSONArray userArray = getUserEmbedding(user);
         for (int i = 0; i < userArray.length(); i++) {
@@ -65,18 +55,23 @@ public class BuildFeature implements Serializable {
         return features;
     }
 
-    public int getNumUsers() {
-        return numUsers;
+    public List<Integer> getSeq(List<Integer> items) {
+        List<Integer> seq = new ArrayList<>();
+        for (int i: items) {
+            int itemId = getItemId(i);
+            seq.add(itemId);
+        }
+        return seq;
     }
 
-    public int getNumItems() {
-        return numItems;
+    public List<Integer> convertItems(List<Integer> items) {
+        return idConverter.convertItems(items);
     }
-
 
     public void close() throws IOException {
-        userStream.close();
-        itemStream.close();
-        embeds.close();
+        if (withState) {
+            embeds.close();
+        }
+        idConverter.close();
     }
 }

@@ -9,45 +9,30 @@ import java.io.*;
 import java.util.Properties;
 
 public class KafkaSource {
-    public static void main(String[] args) throws IOException, InterruptedException {
-        Properties kafkaProps = new Properties();
-        kafkaProps.setProperty("bootstrap.servers", "localhost:9092");
-        kafkaProps.setProperty("ack", "1");
-        kafkaProps.setProperty("batch.size", "16384");
-        kafkaProps.setProperty("linger.ms", "1");
-        kafkaProps.setProperty("buffer.memory", "33554432");
-        kafkaProps.setProperty("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
-        kafkaProps.setProperty("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+    public static void sendData(Properties kafkaProps, String dataPath, Boolean header)
+            throws IOException, InterruptedException {
         KafkaProducer<String, String> producer = new KafkaProducer<>(kafkaProps);
-
-        //  ClassLoader classloader = Thread.currentThread().getContextClassLoader();
-        //  InputStream is = classloader.getResourceAsStream("/news_data.csv");
-        String dataPath = KafkaSource.class.getResource("/news_data.csv").getFile();
         BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(dataPath)));
         String temp;
         int i = 0;
         while ((temp = br.readLine()) != null) {
             i++;
-            if (i > 1) {  // skip header line
-                String[] splitted = temp.split(",");
-                String[] record = {splitted[0], splitted[4], splitted[5]};
-                String csvString = String.join(",", record);
-                producer.send(new ProducerRecord<>("flink-rl", "news", csvString), new Callback() {
-                    @Override
-                    public void onCompletion(RecordMetadata metadata, Exception e) {
-                        if (e != null) {
-                            e.printStackTrace();
-                        }
+            if (header && i == 1) continue;  // skip header line
+            String[] splitted = temp.split(",");
+            String[] record = {splitted[0], splitted[1], splitted[3]};
+            String csvString = String.join(",", record);
+            producer.send(new ProducerRecord<>("flink-rl", "news", csvString), new Callback() {
+                @Override
+                public void onCompletion(RecordMetadata metadata, Exception e) {
+                    if (e != null) {
+                        e.printStackTrace();
                     }
-                });
-                Thread.sleep(500L);
-            }
+                }
+            });
+            Thread.sleep(500L);
         }
 
         br.close();
         producer.close();
     }
 }
-
-
-

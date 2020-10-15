@@ -12,12 +12,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Comparator;
 
-public class TopNHotItems extends KeyedProcessFunction<Tuple, TopItemEntity, List<String>> {
+public class TopNPopularItems extends KeyedProcessFunction<Tuple, TopItemEntity, List<String>> {
 
     private ListState<TopItemEntity> itemState;
     private final int topSize;
 
-    public TopNHotItems(int topSize) {
+    public TopNPopularItems(int topSize) {
         this.topSize = topSize;
     }
 

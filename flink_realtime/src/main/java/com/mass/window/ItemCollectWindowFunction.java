@@ -14,8 +14,6 @@ import org.apache.flink.util.Collector;
 
 import java.io.IOException;
 import java.util.LinkedList;
-import java.util.Queue;
-import java.util.List;
 
 public class ItemCollectWindowFunction extends ProcessWindowFunction<RecordEntity, UserConsumed, Tuple, TimeWindow> {
 

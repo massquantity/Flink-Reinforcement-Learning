@@ -39,11 +39,11 @@ public class CustomFileSource extends RichSourceFunction<RecordEntity> {
         int i = 0;
         while ((temp = br.readLine()) != null) {
             i++;
-            if (!header && i == 1) continue;  // skip header line
+            if (header && i == 1) continue;  // skip header line
             String[] line = temp.split(",");
             int userId = Integer.valueOf(line[0]);
-            int itemId = Integer.valueOf(line[4]);
-            long time = Long.valueOf(line[5]);
+            int itemId = Integer.valueOf(line[1]);
+            long time = Long.valueOf(line[3]);
             ctx.collect(new RecordEntity(userId, itemId, time));
             Thread.sleep(500L);
         }

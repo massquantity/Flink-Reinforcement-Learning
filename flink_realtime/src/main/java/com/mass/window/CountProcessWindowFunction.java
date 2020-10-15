@@ -1,7 +1,6 @@
 package com.mass.window;
 
 import com.mass.entity.TopItemEntity;
-import org.apache.flink.api.java.tuple.Tuple;
 import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
@@ -15,5 +14,3 @@ public class CountProcessWindowFunction extends ProcessWindowFunction<Long, TopI
         out.collect(TopItemEntity.of(itemId, windowEnd, count));
     }
 }
-
-

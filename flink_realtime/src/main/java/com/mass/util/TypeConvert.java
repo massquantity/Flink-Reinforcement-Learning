@@ -19,26 +19,41 @@ public class TypeConvert {
         return sb.toString();
     }
 
-    public static JSONObject convertJSON(String message) {
+    public static JSONArray convertJSON(String message) {
         JSONArray resArray = new JSONArray(message);
-        return resArray.getJSONObject(0);
+        return resArray.getJSONArray(0);
     }
 
-    public static String convertEmbedding(List<Float> embeds) {
-        String repeat = StringUtils.repeat("\"x\",", embeds.size());
-        String columns = "{\"columns\": [" + repeat.substring(0, repeat.length() - 1) + "], ";
-        StringBuilder sb = new StringBuilder("\"data\": [[");
+    public static String convertEmbedding(List<Float> embeds, int user, int numRec) {
+    //    String repeat = StringUtils.repeat("\"x\",", embeds.size());
+    //    String columns = "{\"columns\": [" + repeat.substring(0, repeat.length() - 1) + "], ";
+        String state = "{\"user\": " + user + ", \"n_rec\": " + numRec + ", ";
+        StringBuilder sb = new StringBuilder("\"embedding\": [[");
         for (float num : embeds) {
             sb.append(String.format("%f,", num));
         }
         sb.deleteCharAt(sb.length() - 1);
         sb.append("]]}");
-        return columns + sb.toString();
+        return state + sb.toString();
+    }
+
+    public static String convertSeq(List<Integer> seq, int user, int numRec) {
+        String state = "{\"user\": [" + user + "], \"n_rec\": " + numRec + ", ";
+        StringBuilder sb = new StringBuilder("\"item\": [[");
+        for (int item : seq) {
+            sb.append(String.format("%d,", item));
+        }
+        sb.deleteCharAt(sb.length() - 1);
+        sb.append("]]}");
+        return state + sb.toString();
     }
 
     public static void main(String[] args) {
         Float[] aa = {1.2f, 3.5f, 5.666f};
         List<Float> bb = Arrays.asList(aa);
-        System.out.println(convertEmbedding(bb));
+        System.out.println(convertEmbedding(bb, 1, 10));
+        Integer[] cc = {1, 2, 3};
+        List<Integer> dd = Arrays.asList(cc);
+        System.out.println(convertSeq(dd, 1, 10));
     }
 }
