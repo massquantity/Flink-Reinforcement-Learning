@@ -15,7 +15,8 @@ public class ReadFromFile {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
         // DataStream<RecordEntity> stream = env.addSource(new CustomFileSource());
-        String dataPath = ReadFromFile.class.getResource("/news_data.csv").getFile();
+        String dataPath = ReadFromFile.class.getResource("/tianchi.csv").getFile();
+        // String dataPath = "./tianchi.csv";
         DataStream<String> stream = env.readTextFile(dataPath);
         DataStream<Tuple2<Integer, String>> result = stream.flatMap(
                 new FlatMapFunction<String, Tuple2<Integer, String>>() {
