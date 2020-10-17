@@ -9,11 +9,11 @@ import java.io.InputStream;
 import java.io.Serializable;
 
 public class Embedding {
-    private InputStream embedStream;
-    private JSONObject embedJSON;
+    private static InputStream embedStream;
+    private static JSONObject embedJSON;
 
-    public Embedding() {
-        embedStream = Embedding.class.getResourceAsStream("/features/embeddings.json");
+    static {
+        embedStream = Thread.currentThread().getContextClassLoader().getResourceAsStream("features/embeddings.json");
         try {
             embedJSON = new JSONObject(new JSONTokener(embedStream));
         } catch (NullPointerException e) {
@@ -21,12 +21,12 @@ public class Embedding {
         }
     }
 
-    public JSONArray getEmbedding(String feat, int index) {
+    public static JSONArray getEmbedding(String feat, int index) {
         JSONArray embeds = embedJSON.getJSONArray(feat);
         return embeds.getJSONArray(index);
     }
 
-    public void close() throws IOException {
+    public static void close() throws IOException {
         embedStream.close();
     }
 }

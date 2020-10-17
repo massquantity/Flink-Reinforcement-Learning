@@ -1,9 +1,8 @@
 package com.mass.source;
 
+import com.mass.util.Property;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.source.RichSourceFunction;
-import org.apache.flink.streaming.api.functions.source.SourceFunction;
-import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunction;
 import com.mass.entity.RecordEntity;
 
 import java.io.BufferedReader;
@@ -12,7 +11,7 @@ import java.io.IOException;
 
 public class CustomFileSource extends RichSourceFunction<RecordEntity> {
 
-    private BufferedReader br;
+    private static BufferedReader br;
     private Boolean header;
     private String filePath;
 
@@ -23,8 +22,8 @@ public class CustomFileSource extends RichSourceFunction<RecordEntity> {
 
     @Override
     public void open(Configuration parameters) throws IOException {
-        String dataPath = CustomFileSource.class.getResource(filePath).getFile();
-        // String dataPath = CustomFileSource.class.getClassLoader().getResource("path").getFile();
+        // String dataPath = Thread.currentThread().getContextClassLoader().getResource(filePath).getFile();
+        String dataPath = Property.getStrValue("data.path");
         br = new BufferedReader(new FileReader(dataPath));
     }
 
@@ -45,7 +44,7 @@ public class CustomFileSource extends RichSourceFunction<RecordEntity> {
             int itemId = Integer.valueOf(line[1]);
             long time = Long.valueOf(line[3]);
             ctx.collect(new RecordEntity(userId, itemId, time));
-            Thread.sleep(500L);
+            Thread.sleep(5L);
         }
     }
 

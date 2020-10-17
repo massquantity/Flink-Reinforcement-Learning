@@ -29,7 +29,7 @@ public class KafkaSource {
                     }
                 }
             });
-            Thread.sleep(500L);
+            Thread.sleep(10L);
         }
 
         br.close();

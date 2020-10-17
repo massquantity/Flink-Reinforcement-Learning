@@ -6,11 +6,9 @@ import com.mass.recommend.fastapi.FastapiRecommender;
 import com.mass.sink.MongodbRecommendSink;
 import com.mass.source.CustomFileSource;
 import com.mass.window.ItemCollectWindowFunction;
-import com.mass.window.ItemCollectWindowFunctionRedis;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.streaming.api.functions.timestamps.AscendingTimestampExtractor;
 import org.apache.flink.streaming.api.functions.timestamps.BoundedOutOfOrdernessTimestampExtractor;
 import org.apache.flink.streaming.api.windowing.time.Time;
 
@@ -20,7 +18,7 @@ public class SeqRecommend {
         env.setParallelism(1);
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
 
-        DataStream<RecordEntity> stream = env.addSource(new CustomFileSource("/tianchi.csv", false));
+        DataStream<RecordEntity> stream = env.addSource(new CustomFileSource("tianchi.csv", false));
         stream.assignTimestampsAndWatermarks(
                 new BoundedOutOfOrdernessTimestampExtractor<RecordEntity>(Time.seconds(10)) {
             @Override

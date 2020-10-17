@@ -39,14 +39,12 @@ public class FastapiRecommender extends RichFlatMapFunction<UserConsumed, Tuple4
     private static Jedis jedis;
     private static HttpURLConnection con;
     private static MapState<Integer, List<Integer>> lastRecState;
-    private static BuildFeature stateBuilder;
 
     public FastapiRecommender(int numRec, int histNum, String algo, Boolean withState) {
         this.histNum = histNum;
         this.numRec = numRec;
         this.algo = algo;
         this.withState = withState;
-        stateBuilder = new BuildFeature(withState, new IdConverter());
     }
 
     @Override
@@ -61,7 +59,7 @@ public class FastapiRecommender extends RichFlatMapFunction<UserConsumed, Tuple4
     public void close() throws IOException {
         jedis.close();
         lastRecState.clear();
-        stateBuilder.close();
+        BuildFeature.close(withState);
     }
 
     private void buildConnection() throws IOException {
@@ -89,15 +87,15 @@ public class FastapiRecommender extends RichFlatMapFunction<UserConsumed, Tuple4
     @Override
     public void flatMap(UserConsumed value, Collector<Tuple4<Integer, List<Integer>, String, Integer>> out) throws Exception {
         buildConnection();
-        int userId = stateBuilder.getUserId(value.userId);
-        List<Integer> items = stateBuilder.convertItems(value.items);
+        int userId = BuildFeature.getUserId(value.userId);
+        List<Integer> items = BuildFeature.convertItems(value.items);
         long timestamp = value.windowEnd;
         String time = format(timestamp);
 
         if (items.size() == this.histNum) {
             String jsonString;
             if (withState) {
-                List<Float> stateEmbeds = stateBuilder.getEmbedding(userId, items);
+                List<Float> stateEmbeds = BuildFeature.getEmbedding(userId, items);
                 jsonString = convertEmbedding(stateEmbeds, userId, numRec);
             } else {
                 jsonString = convertSeq(items, userId, numRec);

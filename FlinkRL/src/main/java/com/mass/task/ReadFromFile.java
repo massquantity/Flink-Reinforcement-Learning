@@ -1,7 +1,5 @@
 package com.mass.task;
 
-import com.mass.entity.RecordEntity;
-import com.mass.source.CustomFileSource;
 import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.datastream.DataStream;
@@ -15,8 +13,8 @@ public class ReadFromFile {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
         // DataStream<RecordEntity> stream = env.addSource(new CustomFileSource());
-        String dataPath = ReadFromFile.class.getResource("/tianchi.csv").getFile();
-        // String dataPath = "./tianchi.csv";
+        // String dataPath = ReadFromFile.class.getResource("/tianchi.csv").getFile();
+        String dataPath = Thread.currentThread().getContextClassLoader().getResource("tianchi.csv").getFile();
         DataStream<String> stream = env.readTextFile(dataPath);
         DataStream<Tuple2<Integer, String>> result = stream.flatMap(
                 new FlatMapFunction<String, Tuple2<Integer, String>>() {

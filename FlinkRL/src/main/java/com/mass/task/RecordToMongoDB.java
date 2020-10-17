@@ -3,6 +3,7 @@ package com.mass.task;
 import com.mass.entity.RecordEntity;
 import com.mass.sink.MongodbRecordSink;
 import com.mass.source.CustomFileSource;
+import com.mass.util.Property;
 import com.mass.util.RecordToEntity;
 import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.serialization.SimpleStringSchema;
@@ -16,11 +17,13 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.util.Properties;
 
 public class RecordToMongoDB {
-    public static void main(String[] args) throws Exception{
+    public static void main(String[] args) throws Exception {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(1);
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
@@ -41,9 +44,9 @@ public class RecordToMongoDB {
                     private JSONObject itemJSON;
 
                     @Override
-                    public void open(Configuration parameters) {
-                        userStream = CustomFileSource.class.getResourceAsStream("/features/user_map.json");
-                        itemStream = CustomFileSource.class.getResourceAsStream("/features/item_map.json");
+                    public void open(Configuration parameters) throws FileNotFoundException {
+                        userStream = new FileInputStream(Property.getStrValue("user_map"));
+                        itemStream = new FileInputStream(Property.getStrValue("item_map"));
                         try {
                             userJSON = new JSONObject(new JSONTokener(userStream));
                             itemJSON = new JSONObject(new JSONTokener(itemStream));

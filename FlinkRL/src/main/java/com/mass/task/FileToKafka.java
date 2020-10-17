@@ -1,6 +1,7 @@
 package com.mass.task;
 
 import com.mass.source.KafkaSource;
+import com.mass.util.Property;
 
 import java.io.IOException;
 import java.util.Properties;
@@ -18,7 +19,8 @@ public class FileToKafka {
 
         //  ClassLoader classloader = Thread.currentThread().getContextClassLoader();
         //  InputStream is = classloader.getResourceAsStream("/news_data.csv");
-        String dataPath = FileToKafka.class.getResource("/tianchi.csv").getFile();
+        // String dataPath = FileToKafka.class.getResource("/tianchi.csv").getFile();
+        String dataPath = Property.getStrValue("data.path");
         KafkaSource.sendData(kafkaProps, dataPath, false);
     }
 }

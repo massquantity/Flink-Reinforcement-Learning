@@ -10,10 +10,10 @@ import org.json.JSONTokener;
 import java.io.InputStream;
 
 public class RecordMap extends RichMapFunction<String, RecordEntity> {
-    private InputStream userStream;
-    private InputStream itemStream;
-    private JSONObject userJSON;
-    private JSONObject itemJSON;
+    private static InputStream userStream;
+    private static InputStream itemStream;
+    private static JSONObject userJSON;
+    private static JSONObject itemJSON;
 
     @Override
     public void open(Configuration parameters) {

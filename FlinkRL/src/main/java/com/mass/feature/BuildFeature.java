@@ -9,37 +9,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class BuildFeature {
-    private Boolean withState;
-    private static Embedding embeds;
-    private static IdConverter idConverter;
 
-    public BuildFeature(Boolean withState, IdConverter idConverter) {
-        this.withState = withState;
-        BuildFeature.idConverter = idConverter;
-        if (withState){
-            embeds = new Embedding();
-        }
+    public static int getUserId(int userIndex) {
+        return IdConverter.getUserId(userIndex);
     }
 
-    public int getUserId(int userIndex) {
-        return idConverter.getUserId(userIndex);
+    public static int getItemId(int itemIndex) {
+        return IdConverter.getItemId(itemIndex);
     }
 
-    public int getItemId(int itemIndex) {
-        return idConverter.getItemId(itemIndex);
-    }
-
-    private JSONArray getUserEmbedding(int userId) {
+    private static JSONArray getUserEmbedding(int userId) {
     //    int userId = getUserId(userIndex);
-        return embeds.getEmbedding("user", userId);
+        return Embedding.getEmbedding("user", userId);
     }
 
-    private JSONArray getItemEmbedding(int itemId) {
+    private static JSONArray getItemEmbedding(int itemId) {
     //    int itemId = getItemId(itemIndex);
-        return embeds.getEmbedding("item", itemId);
+        return Embedding.getEmbedding("item", itemId);
     }
 
-    public List<Float> getEmbedding(int user, List<Integer> items) {
+    public static List<Float> getEmbedding(int user, List<Integer> items) {
         List<Float> features = new ArrayList<>();
         JSONArray userArray = getUserEmbedding(user);
         for (int i = 0; i < userArray.length(); i++) {
@@ -55,7 +44,7 @@ public class BuildFeature {
         return features;
     }
 
-    public List<Integer> getSeq(List<Integer> items) {
+    public static List<Integer> getSeq(List<Integer> items) {
         List<Integer> seq = new ArrayList<>();
         for (int i: items) {
             int itemId = getItemId(i);
@@ -64,14 +53,14 @@ public class BuildFeature {
         return seq;
     }
 
-    public List<Integer> convertItems(List<Integer> items) {
-        return idConverter.convertItems(items);
+    public static List<Integer> convertItems(List<Integer> items) {
+        return IdConverter.convertItems(items);
     }
 
-    public void close() throws IOException {
+    public static void close(Boolean withState) throws IOException {
         if (withState) {
-            embeds.close();
+            Embedding.close();
         }
-        idConverter.close();
+        IdConverter.close();
     }
 }

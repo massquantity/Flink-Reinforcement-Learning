@@ -1,46 +1,47 @@
 package com.mass.feature;
 
+import com.mass.util.Property;
+import com.typesafe.config.ConfigException;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.Serializable;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class IdConverter {
-    private InputStream userStream;
-    private InputStream itemStream;
-    private JSONObject userJSON;
-    private JSONObject itemJSON;
-    private int numUsers;
-    private int numItems;
+    private static InputStream userStream;
+    private static InputStream itemStream;
+    private static JSONObject userJSON;
+    private static JSONObject itemJSON;
+    private static int numUsers;
+    private static int numItems;
 
-    public IdConverter() {
-        userStream = IdConverter.class.getResourceAsStream("/features/user_map.json");
-        itemStream = IdConverter.class.getResourceAsStream("/features/item_map.json");
+    static {
         try {
+            userStream = new FileInputStream(Property.getStrValue("user_map"));
+            itemStream = new FileInputStream(Property.getStrValue("item_map"));
             userJSON = new JSONObject(new JSONTokener(userStream));
             itemJSON = new JSONObject(new JSONTokener(itemStream));
-        } catch (NullPointerException e) {
+        } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
+
         numUsers = userJSON.length();
         numItems = itemJSON.length();
     }
 
-    public int getUserId(int userIndex) {
+    public static int getUserId(int userIndex) {
         String user = String.valueOf(userIndex);
         return userJSON.has(user) ? userJSON.getInt(user) : numUsers;
     }
 
-    public int getItemId(int itemIndex) {
+    public static int getItemId(int itemIndex) {
         String item = String.valueOf(itemIndex);
         return itemJSON.has(item) ? itemJSON.getInt(item) : numItems;
     }
 
-    public List<Integer> convertItems(List<Integer> items) {
+    public static List<Integer> convertItems(List<Integer> items) {
         List<Integer> converted = new ArrayList<>();
         for (int i : items) {
             converted.add(getItemId(i));
@@ -48,7 +49,7 @@ public class IdConverter {
         return converted;
     }
 
-    public void close() throws IOException {
+    public static void close() throws IOException {
         userStream.close();
         itemStream.close();
     }
