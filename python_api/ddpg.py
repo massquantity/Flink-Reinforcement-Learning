@@ -34,7 +34,7 @@ class State(BaseModel):
 
 
 @app.post("/{algo}")
-async def recommend(algo: str, seq: Seq) -> str:
+async def recommend(algo: str, seq: Seq) -> list:
     if algo == "ddpg":
         with torch.no_grad():
             data = {
