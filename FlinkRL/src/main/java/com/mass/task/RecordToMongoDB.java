@@ -42,6 +42,8 @@ public class RecordToMongoDB {
                     private InputStream itemStream;
                     private JSONObject userJSON;
                     private JSONObject itemJSON;
+                    private int numUsers;
+                    private int numItems;
 
                     @Override
                     public void open(Configuration parameters) throws FileNotFoundException {
@@ -53,11 +55,13 @@ public class RecordToMongoDB {
                         } catch (NullPointerException e) {
                             e.printStackTrace();
                         }
+                        numUsers = userJSON.length();
+                        numItems = itemJSON.length();
                     }
 
                     @Override
                     public RecordEntity map(String value) {
-                        return RecordToEntity.getRecord(value, userJSON, itemJSON);
+                        return RecordToEntity.getRecord(value, userJSON, itemJSON, numUsers, numItems);
                    }
 
                     @Override
