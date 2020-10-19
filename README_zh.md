@@ -1,6 +1,6 @@
 # Flink-Reinforcement-Learning
 
-### `English`  &nbsp;  `简体中文`
+### [`English`](https://github.com/massquantity/Flink-Reinforcement-Learning)  &nbsp;  `简体中文`
 
 <br>
 
@@ -8,7 +8,7 @@ FlinkRL 是一个基于 Flink 和强化学习的推荐系统。具体来说，Fl
 
 FlinkRL 主要用于在线推理，而离线训练在另一个仓库 [DBRL](https://github.com/massquantity/DBRL) 中实现，下图是整体系统架构：
 
-![](/home/massquantity/Documents/Flink_RL/readme1.png)
+![](https://s1.ax1x.com/2020/10/19/0x5Qje.png)
 
 
 
@@ -106,13 +106,13 @@ $ ./bin/stop-cluster.sh  # stop the cluster
 
 打开 [http://localhost:8081](http://localhost:8081/) 可使用 Flink WebUI :
 
-![](/home/massquantity/Documents/Flink_RL/5.png)
+![](https://s1.ax1x.com/2020/10/19/0zCM2F.png)
 
 
 
 FastAPI 中也提供了交互式的 WebUI，可访问 http://127.0.0.1:8000/docs :
 
-![](/home/massquantity/Documents/Flink_RL/6.jpg)
+![](https://s1.ax1x.com/2020/10/19/0x58HA.jpg)
 
 
 

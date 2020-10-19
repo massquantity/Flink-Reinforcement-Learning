@@ -1,6 +1,6 @@
 # Flink-Reinforcement-Learning
 
-### `English`  &nbsp;  `简体中文`
+### `English`  &nbsp; [`简体中文`](https://github.com/massquantity/Flink-Reinforcement-Learning/blob/master/README_zh.md)
 
 <br>
 
@@ -8,7 +8,7 @@ FlinkRL is a realtime recommender system based upon Flink and Reinforcement Lear
 
 FlinkRL is mainly used for online inference, and the offline model training part is implemented in another repo, i.e. [DBRL](https://github.com/massquantity/DBRL). The full system architecture is as follows:
 
-![](/home/massquantity/Documents/Flink_RL/readme1.png)
+![](https://s1.ax1x.com/2020/10/19/0x5t4P.png)
 
 
 
@@ -108,13 +108,13 @@ $ ./bin/stop-cluster.sh  # stop the cluster
 
 Open [http://localhost:8081](http://localhost:8081/) to use Flink WebUI :
 
-![](/home/massquantity/Documents/Flink_RL/5.png)
+![](https://s1.ax1x.com/2020/10/19/0zCM2F.png)
 
 
 
 FastAPI also comes with an interactive WebUI, you can access it through http://127.0.0.1:8000/docs :
 
-![](/home/massquantity/Documents/Flink_RL/6.jpg)
+![](https://s1.ax1x.com/2020/10/19/0x58HA.jpg)
 
 
 
