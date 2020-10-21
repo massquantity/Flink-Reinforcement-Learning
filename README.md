@@ -1,6 +1,6 @@
 # Flink-Reinforcement-Learning
 
-### `English`  &nbsp; [`简体中文`](https://github.com/massquantity/Flink-Reinforcement-Learning/blob/master/README_zh.md)
+### `English`  &nbsp; [`简体中文`](https://github.com/massquantity/Flink-Reinforcement-Learning/blob/master/README_zh.md) &nbsp; [`blog post`](https://www.cnblogs.com/massquantity/p/13842139.html) 
 
 <br>
 
